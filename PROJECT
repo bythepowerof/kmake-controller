@@ -1,0 +1,10 @@
+version: "2"
+domain: github.com
+repo: github.com/bythepowerof/kmake-controller
+resources:
+- group: bythepowerof
+  version: v1
+  kind: Kmake
+- group: bythepowerof
+  version: v1
+  kind: KmakeRun

@@ -1,0 +1,7 @@
+apiVersion: bythepowerof.github.com/v1
+kind: Kmake
+metadata:
+  name: kmake-sample
+spec:
+  # Add fields here
+  foo: bar
