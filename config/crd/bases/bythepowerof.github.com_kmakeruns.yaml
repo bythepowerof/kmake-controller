@@ -31,9 +31,38 @@ spec:
           type: object
         spec:
           description: KmakeRunSpec defines the desired state of KmakeRun
+          properties:
+            image:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
+              type: string
+            kmake:
+              type: string
+            targets:
+              items:
+                type: string
+              type: array
+          required:
+          - kmake
           type: object
         status:
           description: KmakeRunStatus defines the observed state of KmakeRun
+          properties:
+            start_time:
+              format: int64
+              type: integer
+            state_message:
+              type: string
+            targets:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              items:
+                type: string
+              type: array
+            terminate_time:
+              format: int64
+              type: integer
           type: object
       type: object
   version: v1

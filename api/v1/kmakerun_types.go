@@ -26,12 +26,19 @@ import (
 type KmakeRunSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Image   string   `json:"image,omitempty"`
+	Kmake   string   `json:"kmake"`
+	Targets []string `json:"targets,omitempty"`
 }
 
 // KmakeRunStatus defines the observed state of KmakeRun
 type KmakeRunStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Targets       []string `json:"targets,omitempty"`
+	StateMessage  string   `json:"state_message,omitempty"`
+	StartTime     int64    `json:"start_time,omitempty"`
+	TerminateTime int64    `json:"terminate_time,omitempty"`
 }
 
 // +kubebuilder:object:root=true

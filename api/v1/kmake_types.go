@@ -16,6 +16,7 @@ limitations under the License.
 package v1
 
 import (
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,25 +28,58 @@ type KmakeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	// Variables []KmakeVariable `json:"variables,omitempty"`
-	Variables  map[string]string `json:"variables,omitempty"`
-	Rules     []KmakeRule     `json:"rules,omitempty"`
+	Variables   map[string]string `json:"variables,omitempty"`
+	Rules       []KmakeRule       `json:"rules"`
+	MasterImage string            `json:"master_image"`
+	StorageSize string            ` json:"storage_size"`
+	JobImage    string            `json:"job_image"`
+	Folders     []string          `json:"folders,omitempty"`
+
+	JobTemplate batchv1beta1.JobTemplateSpec `json:"jobTemplate,omitempty"`
 }
 
 // KmakeStatus defines the observed state of Kmake
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Runs   []KmakeRunStatus `json:"runs,omitempty"`
+	Status string           `json:"status,omitempty"`
 }
 
+// Kmake is the Schema for the kmakes API
+// +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="status of the kind"
 // +kubebuilder:object:root=true
 
-// Kmake is the Schema for the kmakes API
 type Kmake struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   KmakeSpec   `json:"spec,omitempty"`
 	Status KmakeStatus `json:"status,omitempty"`
+}
+
+// func (kmake *Kmake) IsSubmitted() bool {
+// 	return kmake.Status.Status != ""
+// }
+
+func (kmake *Kmake) IsBeingDeleted() bool {
+	return !kmake.ObjectMeta.DeletionTimestamp.IsZero()
+}
+
+const KmakeFinalizerName = "kmake.finalizers.bythepowerof.github.com"
+
+func (kmake *Kmake) HasFinalizer(finalizerName string) bool {
+	return containsString(kmake.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmake *Kmake) AddFinalizer(finalizerName string) {
+	kmake.ObjectMeta.Finalizers = append(kmake.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmake *Kmake) RemoveFinalizer(finalizerName string) {
+	kmake.ObjectMeta.Finalizers = removeString(kmake.ObjectMeta.Finalizers, finalizerName)
 }
 
 // +kubebuilder:object:root=true
@@ -59,9 +93,9 @@ type KmakeList struct {
 
 type KmakeRule struct {
 	Targets     []string `json:"targets"`
-	DoubleColon bool     `json:"doublecolon"`
-	Commands    []string `json:"commands"`
-	Prereqs     []string `json:"prereqs"`
+	DoubleColon bool     `json:"double_colon,omitempty"`
+	Commands    []string `json:"commands,omitempty"`
+	Prereqs     []string `json:"prereqs,omitempty"`
 }
 
 func init() {
