@@ -22,10 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func NamespacedNameConcat(namespacedName types.NamespacedName, suffix string) types.NamespacedName {
+func NamespacedNameConcat(owner metav1.Object, suffix string) types.NamespacedName {
 	return types.NamespacedName{
-		Namespace: namespacedName.Namespace,
-		Name:      namespacedName.Name + "-" + suffix,
+		Namespace: owner.GetNamespace(),
+		Name:      owner.GetName() + "-" + suffix,
 	}
 }
 
@@ -33,6 +33,7 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 	return metav1.ObjectMeta{
 		Namespace: namespacedName.Namespace,
 		Name:      namespacedName.Name + "-" + suffix,
+		Labels:    owner.GetLabels(),
 		OwnerReferences: []metav1.OwnerReference{
 			metav1.OwnerReference{
 				APIVersion: "bythepowerof.github.com/v1",
@@ -44,6 +45,6 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 	}
 }
 
-func NameConcat(namespacedName types.NamespacedName, suffix string) string {
-	return namespacedName.Name + "-" + suffix
+func NameConcat(owner metav1.Object, suffix string) string {
+	return owner.GetName() + "-" + suffix
 }

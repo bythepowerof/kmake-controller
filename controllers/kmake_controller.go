@@ -18,6 +18,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,7 +33,7 @@ import (
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/kubernetes/pkg/api"
 	// "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/api/resource"
+	// "k8s.io/apimachinery/pkg/api/resource"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -50,15 +52,18 @@ type KmakeReconciler struct {
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes/status,verbs=get;update;patch
 
 func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("kmake", req.NamespacedName)
+	ctx := context.Background()
+	log := r.Log.WithValues("kmake", req.NamespacedName)
+
+	requeue := ctrl.Result{Requeue: true}
+	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(5 * time.Minute))}
 
 	// your logic here
 	instance := &bythepowerofv1.Kmake{}
-	err := r.Get(context.Background(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 
-	r.Log.Info(fmt.Sprintf("Starting reconcile loop for %v", req.NamespacedName))
-	defer r.Log.Info(fmt.Sprintf("Finish reconcile loop for %v", req.NamespacedName))
+	log.Info(fmt.Sprintf("Starting reconcile loop for %v", req.NamespacedName))
+	defer log.Info(fmt.Sprintf("Finish reconcile loop for %v", req.NamespacedName))
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -67,56 +72,72 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
-	// if instance.IsBeingDeleted() {
-	// 	err := r.handleFinalizer(instance)
-	// 	if err != nil {
-	// 		return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
-	// 	}
-	// 	// r.Recorder.Event(instance, "Normal", "Deleted", "Object finalizer is deleted")
-	// 	return ctrl.Result{}, nil
-	// }
-
-	// if !instance.HasFinalizer(bythepowerofv1.KmakeFinalizerName) {
-	// 	err = r.addFinalizer(instance)
-	// 	if err != nil {
-	// 		return reconcile.Result{}, fmt.Errorf("error when handling kmakefinalizer: %v", err)
-	// 	}
-	// 	// r.Recorder.Event(instance, "Normal", "Added", "Object finalizer is added")
-	// 	return ctrl.Result{}, nil
-	// }
-
 	currentpvc := &corev1.PersistentVolumeClaim{}
 	requiredpvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc"),
-		Spec: corev1.PersistentVolumeClaimSpec{
-			VolumeName:  NameConcat(req.NamespacedName, "pvc"),
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse(instance.Spec.StorageSize),
-				},
-			},
-		},
+
+		Spec: instance.Spec.PersistentVolumeClaimTemplate,
 	}
 
-	r.Log.Info(fmt.Sprintf("Checking pvc %v", NameConcat(req.NamespacedName, "pvc")))
+	log.Info(fmt.Sprintf("Checking pvc %v", NameConcat(instance, "pvc")))
 
-	err = r.Get(context.Background(), NamespacedNameConcat(req.NamespacedName, "pvc"), currentpvc)
+	err = r.Get(ctx, NamespacedNameConcat(instance, "pvc"), currentpvc)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			r.Log.Info(fmt.Sprintf("Not found pvc %v", NameConcat(req.NamespacedName, "pvc")))
+			log.Info(fmt.Sprintf("Not found pvc %v", NameConcat(instance, "pvc")))
 
 			// create it
-			err = r.Create(context.Background(), requiredpvc)
+			err = r.Create(ctx, requiredpvc)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info(fmt.Sprintf("Created pvc %v", NameConcat(req.NamespacedName, "pvc")))
+			log.Info(fmt.Sprintf("Created pvc %v", NameConcat(instance, "pvc")))
+			instance.Status.Status = "Provision PVC"
+			r.Status().Update(ctx, instance)
+			return requeue, err
 
 		}
 		return reconcile.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	if !(reflect.DeepEqual(currentpvc.Spec.Resources, requiredpvc.Spec.Resources) &&
+		reflect.DeepEqual(currentpvc.ObjectMeta.Labels, requiredpvc.ObjectMeta.Labels)) {
+		log.Info(fmt.Sprintf("delete/recreate pvc %v", NameConcat(instance, "pvc")))
+
+		// You don't seem to be able to update pvcs - even the labels so recreate
+		// the pvc will not relase if other jobs are in flight
+		// Recreate in next reconcile
+		// currentpvc.ObjectMeta.Labels = requiredpvc.ObjectMeta.Labels
+		// currentpvc.Spec = requiredpvc.Spec
+		r.Delete(ctx, currentpvc)
+		log.Info(fmt.Sprintf("Deleted pvc %v", NameConcat(instance, "pvc")))
+		instance.Status.Status = "Delete PVC"
+
+		r.Status().Update(ctx, instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return requeue, nil
+	}
+
+	if currentpvc.Status.Phase != corev1.ClaimBound {
+		log.Info(fmt.Sprintf("Backof pv for %v -%v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase)))
+		instance.Status.Status = "Backoff PV " + string(currentpvc.Status.Phase)
+		r.Status().Update(ctx, instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return backoff5, nil
+	}
+	// so we need to rerun the master job to copy the files and makefile again
+	log.Info(fmt.Sprintf("Provisioned pvc for %v -%v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase)))
+	instance.Status.Status = "Provisioned PVC"
+	r.Status().Update(ctx, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	return requeue, nil
+
+	// return ctrl.Result{}, nil
 }
 
 func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -17,6 +17,7 @@ package v1
 
 import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,11 +32,11 @@ type KmakeSpec struct {
 	Variables   map[string]string `json:"variables,omitempty"`
 	Rules       []KmakeRule       `json:"rules"`
 	MasterImage string            `json:"master_image"`
-	StorageSize string            ` json:"storage_size"`
 	JobImage    string            `json:"job_image"`
 	Folders     []string          `json:"folders,omitempty"`
 
-	JobTemplate batchv1beta1.JobTemplateSpec `json:"jobTemplate,omitempty"`
+	JobTemplate                   batchv1beta1.JobTemplateSpec     `json:"job_template,omitempty"`
+	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 
 // KmakeStatus defines the observed state of Kmake

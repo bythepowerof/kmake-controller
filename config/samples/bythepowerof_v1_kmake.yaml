@@ -2,6 +2,10 @@ apiVersion: bythepowerof.github.com/v1
 kind: Kmake
 metadata:
   name: kmake-sample
+  labels:
+    labels: label1
+    label2: label2
+    label3: labelw
 spec:
   # jobTemplate:
   #   spec:
@@ -14,9 +18,15 @@ spec:
   #           - /bin/sh
   #           - -c
   #           - date; echo Hello from the Kubernetes cluster
+  persistent_volume_claim_template:
+    storageClassName: manual
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 3Ki
   master_image: busybox
   job_image: busybox
-  storage_size: 1Gi
   rules:
   - targets:
     - task1
