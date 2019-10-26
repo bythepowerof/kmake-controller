@@ -19,14 +19,15 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	// "k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// "k8s.io/client-go/tools/record"
 	// ctrl "sigs.k8s.io/controller-runtime"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 	corev1 "k8s.io/api/core/v1"
@@ -43,9 +44,21 @@ import (
 // KmakeReconciler reconciles a Kmake object
 type KmakeReconciler struct {
 	client.Client
-	Log logr.Logger
+	Log      logr.Logger
+	Recorder record.EventRecorder
+}
 
-	// Recorder record.EventRecorder
+func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, reason string, message string, a ...interface{}) {
+	m := fmt.Sprintf(message, a...)
+	r.Recorder.Event(instance, "Normal", reason, m)
+
+	log := r.Log.WithValues("kmake", instance.GetName())
+	log.Info(m)
+
+	if instance.Status.Status != m {
+		instance.Status.Status = m
+		r.Status().Update(context.Background(), instance)
+	}
 }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes,verbs=get;list;watch;create;update;patch;delete
@@ -72,6 +85,12 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
+	if instance.IsBeingDeleted() {
+		r.Event(instance, "Deleted", "Object finalizer is deleted")
+		return ctrl.Result{}, nil
+	}
+
+	// PVC
 	currentpvc := &corev1.PersistentVolumeClaim{}
 	requiredpvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc"),
@@ -92,8 +111,9 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				return reconcile.Result{}, err
 			}
 			log.Info(fmt.Sprintf("Created pvc %v", NameConcat(instance, "pvc")))
-			instance.Status.Status = "Provision PVC"
-			r.Status().Update(ctx, instance)
+
+			r.Event(instance, "ProvisionPVC", "Created pvc %v", NameConcat(instance, "pvc"))
+
 			return requeue, err
 
 		}
@@ -108,33 +128,64 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		// Recreate in next reconcile
 		// currentpvc.ObjectMeta.Labels = requiredpvc.ObjectMeta.Labels
 		// currentpvc.Spec = requiredpvc.Spec
-		r.Delete(ctx, currentpvc)
-		log.Info(fmt.Sprintf("Deleted pvc %v", NameConcat(instance, "pvc")))
-		instance.Status.Status = "Delete PVC"
-
-		r.Status().Update(ctx, instance)
+		err = r.Delete(ctx, currentpvc)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		r.Event(instance, "DeletePVC", "Deleted pvc %v", NameConcat(instance, "pvc"))
 		return requeue, nil
 	}
 
 	if currentpvc.Status.Phase != corev1.ClaimBound {
-		log.Info(fmt.Sprintf("Backof pv for %v -%v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase)))
-		instance.Status.Status = "Backoff PV " + string(currentpvc.Status.Phase)
-		r.Status().Update(ctx, instance)
+		r.Event(instance, "BackofPV", "Backoff PV for %v - %v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase))
+		return backoff5, nil
+	}
+
+	if strings.Contains(instance.Status.Status, "Backoff PV") {
+		// so we need to rerun the master job to copy the files and makefile again
+		r.Event(instance, "ProvisionedPVC", "Provisioned pvc for %v -%v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase))
+	}
+	// env configmap
+
+	currentenvmap := &corev1.ConfigMap{}
+	requiredenvmap := &corev1.ConfigMap{
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env"),
+
+		Data: instance.Spec.Variables,
+	}
+
+	log.Info(fmt.Sprintf("Checking env map %v", NameConcat(instance, "env")))
+
+	err = r.Get(ctx, NamespacedNameConcat(instance, "env"), currentenvmap)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("Not found env map %v", NameConcat(instance, "env")))
+
+			// create it
+			err = r.Create(ctx, requiredenvmap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			r.Event(instance, "CreatedEnvMap", "Created env map %v", NameConcat(instance, "env"))
+			return requeue, err
+
+		}
+		return reconcile.Result{}, err
+	}
+	if !(reflect.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
+		reflect.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
+		log.Info(fmt.Sprintf("modify env map %v", NameConcat(instance, "env")))
+		currentenvmap.ObjectMeta.Labels = requiredenvmap.ObjectMeta.Labels
+		currentenvmap.Data = requiredenvmap.Data
+		err = r.Update(ctx, currentenvmap)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		return backoff5, nil
+
+		r.Event(instance, "UpdatedEnvMap", "Updated %v", NameConcat(instance, "env"))
+		return requeue, nil
 	}
-	// so we need to rerun the master job to copy the files and makefile again
-	log.Info(fmt.Sprintf("Provisioned pvc for %v -%v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase)))
-	instance.Status.Status = "Provisioned PVC"
-	r.Status().Update(ctx, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+
 	return requeue, nil
 
 	// return ctrl.Result{}, nil

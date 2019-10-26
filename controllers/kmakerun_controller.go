@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -28,7 +29,8 @@ import (
 // KmakeRunReconciler reconciles a KmakeRun object
 type KmakeRunReconciler struct {
 	client.Client
-	Log logr.Logger
+	Log      logr.Logger
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakeruns,verbs=get;list;watch;create;update;patch;delete

@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2016-02-18T18:52:05Z
+  name: kmake-config
+data:
+  kmake.yaml: |
+    variables:
+      a: a
+    rules:
+    - targets:
+      - task1
+      doublecolon: false
+      commands:
+      - '@echo test "$(VAR22)" = "lit2#hash"'
+      - '# test "$(VAR22)" = "lit2#hash"'
+      - '@echo $@'
+      - '@echo $(VAR1)'
+      - '@echo $(VAR2)'
+      - "@echo \\\n$(VAR3)"
+      prereqs:
+      - task2
+      - task3
+      - file1
+      - file2
+      - file3
+    - targets:
+      - task2
+      - task3
+      doublecolon: true
+      commands:
+      - '@echo $@'
+      - '@echo "VAR4 = $(VAR4)"'
+      - $(call COMMAND, .)
+      - $(call VAR7, ..)
+      prereqs:
+      - file1
+      - file2
+      - file3
+    - targets:
+      - task2
+      doublecolon: true
+      commands:
+      - '@echo nested'
+    - targets:
+      - file1
+      - file2
+      - file3
+      doublecolon: true
+      commands:
+      - '@echo $*'
+      targetpatterns:
+      - file%
+    - targets:
+      - file1
+      doublecolon: true
+      commands:
+      - '@echo more file1'
+    - targets:
+      - folder1
+      - folder2
+      doublecolon: false
+      commands:
+      - touch $@/file1
+    - targets:
+      - .INTERMEDIATE
+      doublecolon: false
+      commands: []
+      prereqs:
+      - task1
+      - task2
+      - task3
+    - targets:
+      - .PHONY
+      doublecolon: false
+      commands: []
+      prereqs:
+      - task1
+      - task2
+      - task3
+      - file1
+      - file2
+      - file3
+      - .KMAKEVOL
+    - targets:
+      - .KMAKEVOL
+      doublecolon: false
+      commands:
+      - cp -r $(KMAKE_WORKDIR)/* $(KMAKE_VOLUME)
+      prereqs:
+      - /tmp/kmake-vol
+    - targets:
+      - /tmp/kmake-vol
+      doublecolon: false
+      commands:
+      - mkdir $@
