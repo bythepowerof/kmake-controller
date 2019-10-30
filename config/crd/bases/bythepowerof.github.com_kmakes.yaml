@@ -4787,9 +4787,13 @@ spec:
                     items:
                       type: string
                     type: array
-                  double_colon:
+                  doublecolon:
                     type: boolean
                   prereqs:
+                    items:
+                      type: string
+                    type: array
+                  target_patterns:
                     items:
                       type: string
                     type: array
@@ -4817,6 +4821,21 @@ spec:
         status:
           description: KmakeStatus defines the observed state of Kmake
           properties:
+            kmake_resources:
+              properties:
+                env:
+                  items:
+                    type: string
+                  type: array
+                kmake:
+                  items:
+                    type: string
+                  type: array
+                pvc:
+                  items:
+                    type: string
+                  type: array
+              type: object
             runs:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying

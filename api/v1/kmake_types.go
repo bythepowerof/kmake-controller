@@ -43,8 +43,9 @@ type KmakeSpec struct {
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Runs   []KmakeRunStatus `json:"runs,omitempty"`
-	Status string           `json:"status,omitempty"`
+	Runs      []KmakeRunStatus `json:"runs,omitempty"`
+	Status    string           `json:"status,omitempty"`
+	Resources KmakeResources   `json:"kmake_resources,omitempty"`
 }
 
 // Kmake is the Schema for the kmakes API
@@ -93,10 +94,17 @@ type KmakeList struct {
 }
 
 type KmakeRule struct {
-	Targets     []string `json:"targets"`
-	DoubleColon bool     `json:"double_colon,omitempty"`
-	Commands    []string `json:"commands,omitempty"`
-	Prereqs     []string `json:"prereqs,omitempty"`
+	Targets        []string `json:"targets"`
+	DoubleColon    bool     `json:"doublecolon,omitempty"`
+	Commands       []string `json:"commands,omitempty"`
+	Prereqs        []string `json:"prereqs,omitempty"`
+	TargetPatterns []string `json:"target_patterns,omitempty"`
+}
+
+type KmakeResources struct {
+	Pvc   []string `json:"pvc,omitempty"`
+	Env   []string `json:"env,omitempty"`
+	Kmake []string `json:"kmake,omitempty"`
 }
 
 func init() {

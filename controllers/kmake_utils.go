@@ -16,9 +16,13 @@ limitations under the License.
 package controllers
 
 import (
+	"fmt"
+	"strings"
+
 	// bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/runtime/schema"
+	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -47,4 +51,43 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 
 func NameConcat(owner metav1.Object, suffix string) string {
 	return owner.GetName() + "-" + suffix
+}
+
+func ToMakefile(rules []bythepowerofv1.KmakeRule) (string, error) {
+	var b strings.Builder
+	hasTargetPattern := false
+
+	for _, rule := range rules {
+		for _, target := range rule.Targets {
+			fmt.Fprintf(&b, "%s ", target)
+		}
+
+		if rule.DoubleColon {
+			fmt.Fprint(&b, "::")
+		} else {
+			fmt.Fprint(&b, ":")
+		}
+
+		for _, pattern := range rule.TargetPatterns {
+			fmt.Fprintf(&b, "%s ", pattern)
+			hasTargetPattern = true
+		}
+
+		if hasTargetPattern {
+			fmt.Fprint(&b, ":")
+		}
+
+		for _, prereq := range rule.Prereqs {
+			fmt.Fprintf(&b, "%s ", prereq)
+		}
+
+		fmt.Fprint(&b, "\n")
+
+		for _, command := range rule.Commands {
+			fmt.Fprintf(&b, "\t%s\n", command)
+		}
+
+		fmt.Fprint(&b, "\n")
+	}
+	return b.String(), nil
 }

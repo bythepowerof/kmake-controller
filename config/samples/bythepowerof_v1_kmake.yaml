@@ -102,6 +102,7 @@ spec:
     - file2
     - file3
     - .KMAKEVOL
+    - .KMAKEINIT
     - .KMAKESLEEP
   - targets:
     - .KMAKEVOL
@@ -111,10 +112,18 @@ spec:
     prereqs:
     - /tmp/kmake-vol
   - targets:
-    - /tmp/kmake-vol
+    - .KMAKEINIT
     doublecolon: false
     commands:
-    - mkdir $@
+    - cp -r $(KMAKE_VOLUME)/* $(KMAKE_WORKDIR)
+    prereqs:
+    - /Users/jeremymarshall/src/test
+  - targets:
+    - (KMAKE_VOLUME)
+    - /Users/jeremymarshall/src/test
+    doublecolon: false
+    commands:
+    - mkdir -p $@
   - targets:
     - .KMAKESLEEP
     doublecolon: false
@@ -122,10 +131,6 @@ spec:
     - '@echo sleeping'
     - tail -f /dev/null
   variables:
-    .PYMAKE: '1'
-    MAKE: /usr/local/opt/python/bin/python3.7 /Users/jeremymarshall/src/github/JeremyMarshall/pymake/pymake/cli/main.py
-    MAKEFLAGS: wsy
-    MAKELEVEL: '0'
     COMMAND: "\tls $1\n\t@echo \"$(VAR1) $(VAR2) $(VAR3) $(VAR4) $(VAR5) $(VAR6)\""
     VAR1: var1 " append" " append2"
     VAR2: var2
@@ -141,5 +146,6 @@ spec:
     INC_VAR1: "'inc_var'"
     KMAKE_VOLUME: /tmp/kmake-vol
     KMAKE_WORKDIR: $(CURDIR)
+
 
 

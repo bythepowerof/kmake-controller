@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	// "k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/record"
@@ -69,7 +70,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("kmake", req.NamespacedName)
 
 	requeue := ctrl.Result{Requeue: true}
-	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(5 * time.Minute))}
+	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
 
 	// your logic here
 	instance := &bythepowerofv1.Kmake{}
@@ -186,6 +187,49 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return requeue, nil
 	}
 
+	// make yaml config map
+
+	y, err := yaml.Marshal(instance.Spec.Rules)
+	m, err := ToMakefile(instance.Spec.Rules)
+
+	currentkmakemap := &corev1.ConfigMap{}
+	requiredkmakemap := &corev1.ConfigMap{
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake"),
+		Data: map[string]string{"kmake.yaml": string(y),
+			"kmake.mk": m},
+	}
+
+	log.Info(fmt.Sprintf("Checking kmake map %v", NameConcat(instance, "kmake")))
+
+	err = r.Get(ctx, NamespacedNameConcat(instance, "kmake"), currentkmakemap)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("Not found kmake map %v", NameConcat(instance, "kmake")))
+
+			// create it
+			err = r.Create(ctx, requiredkmakemap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			r.Event(instance, "CreatedKmakeMap", "Created kmake map %v", NameConcat(instance, "kmake"))
+			return requeue, err
+
+		}
+		return reconcile.Result{}, err
+	}
+	if !(reflect.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
+		reflect.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
+		log.Info(fmt.Sprintf("modify kmake map %v", NameConcat(instance, "kmake")))
+		currentkmakemap.ObjectMeta.Labels = requiredkmakemap.ObjectMeta.Labels
+		currentkmakemap.Data = requiredkmakemap.Data
+		err = r.Update(ctx, currentkmakemap)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		r.Event(instance, "UpdatedKmakeMap", "Updated %v", NameConcat(instance, "kmake"))
+		return requeue, nil
+	}
 	return requeue, nil
 
 	// return ctrl.Result{}, nil
