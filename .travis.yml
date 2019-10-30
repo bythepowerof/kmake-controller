@@ -1,0 +1,25 @@
+language: go
+
+go:
+- "1.13"
+
+cache:
+  directories:
+  # this is installed with sudo :(
+  # - /usr/local/kubebuilder
+  - $HOME/.cache/go-build
+  - $HOME/gopath/pkg/mod
+
+before_install:
+- export GO111MODULE=on
+- export PATH=$PATH:/usr/local/kubebuilder/bin
+- go install sigs.k8s.io/kustomize/kustomize/v3
+- $TRAVIS_BUILD_DIR/install-kb.sh
+
+script:
+- go mod download
+- make manager
+- ./go.test.sh
+
+after_success:
+- bash <(curl -s https://codecov.io/bash)
