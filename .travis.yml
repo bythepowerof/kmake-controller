@@ -1,0 +1,19 @@
+language: go
+
+go:
+- "1.13"
+
+cache:
+  directories:
+  - /usr/local/kubebuilder
+
+before_install:
+- export PATH=$PATH:/usr/local/kubebuilder/bin
+- go install sigs.k8s.io/kustomize/kustomize/v3
+- $TRAVIS_BUILD_DIR/install-kb.sh
+
+script:
+- env GO111MODULE=on go mod download
+- env GO111MODULE=on make install
+- env GO111MODULE=on make manager
+- env GO111MODULE=on make test
