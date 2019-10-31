@@ -15,6 +15,5 @@ before_install:
 
 script:
 - go mod download
-- make install
 - make manager
 - make test
