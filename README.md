@@ -37,7 +37,7 @@ linux       | [![Build Status](https://travis-ci.org/bythepowerof/kmake-controll
 * an env config map of any variables in the `Makefile`
 * a config map containing the target part of the `Makefile` as yaml and a reduced `Makefile`
 
-A first run of `kmake-run` will populate the PVC from the source docker image using the target diefined in [kmake.mk][2]
+A first run of `kmake-run` will populate the PVC from the source docker image using the target defined in [kmake.mk][2]
 
 
 ### TODO
