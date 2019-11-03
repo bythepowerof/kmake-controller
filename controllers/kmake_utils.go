@@ -26,18 +26,59 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func NamespacedNameConcat(owner metav1.Object, suffix string) types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: owner.GetNamespace(),
-		Name:      owner.GetName() + "-" + suffix,
+type SubResource int
+
+const (
+	PVC SubResource = iota
+	EnvMap
+	KmakeMap
+	Main
+)
+
+func (d SubResource) String() string {
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main"}[d]
+}
+
+type Phase int
+
+const (
+	Provision Phase = iota
+	Delete
+	BackOff
+	Update
+)
+
+func (d Phase) String() string {
+	return [...]string{"Provision", "Delete", "BackOff", "Update"}[d]
+}
+
+func NamespacedNameConcat(owner *bythepowerofv1.Kmake, subresource SubResource) types.NamespacedName {
+	switch subresource {
+	case PVC:
+		return types.NamespacedName{
+			Namespace: owner.GetNamespace(),
+			Name:      owner.Status.Resources.Pvc,
+		}
+	case EnvMap:
+		return types.NamespacedName{
+			Namespace: owner.GetNamespace(),
+			Name:      owner.Status.Resources.Env,
+		}
+	case KmakeMap:
+		return types.NamespacedName{
+			Namespace: owner.GetNamespace(),
+			Name:      owner.Status.Resources.Kmake,
+		}
 	}
+	return types.NamespacedName{}
 }
 
 func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string) metav1.ObjectMeta {
+
 	return metav1.ObjectMeta{
-		Namespace: namespacedName.Namespace,
-		Name:      namespacedName.Name + "-" + suffix,
-		Labels:    owner.GetLabels(),
+		Namespace:    namespacedName.Namespace,
+		GenerateName: namespacedName.Name + "-" + suffix + "-",
+		Labels:       owner.GetLabels(),
 		OwnerReferences: []metav1.OwnerReference{
 			metav1.OwnerReference{
 				APIVersion: "bythepowerof.github.com/v1",
@@ -49,8 +90,17 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 	}
 }
 
-func NameConcat(owner metav1.Object, suffix string) string {
-	return owner.GetName() + "-" + suffix
+func NameConcat(status bythepowerofv1.KmakeStatus, subresource SubResource) string {
+	switch subresource {
+	case PVC:
+		return status.Resources.Pvc
+	case EnvMap:
+		return status.Resources.Env
+	case KmakeMap:
+		return status.Resources.Kmake
+	}
+	return ""
+
 }
 
 func ToMakefile(rules []bythepowerofv1.KmakeRule) (string, error) {
