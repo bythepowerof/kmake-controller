@@ -102,9 +102,9 @@ type KmakeRule struct {
 }
 
 type KmakeResources struct {
-	Pvc   []string `json:"pvc,omitempty"`
-	Env   []string `json:"env,omitempty"`
-	Kmake []string `json:"kmake,omitempty"`
+	Pvc   string `json:"pvc,omitempty"`
+	Env   string `json:"env,omitempty"`
+	Kmake string `json:"kmake,omitempty"`
 }
 
 func init() {

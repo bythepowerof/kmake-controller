@@ -49,15 +49,35 @@ type KmakeReconciler struct {
 	Recorder record.EventRecorder
 }
 
-func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, reason string, message string, a ...interface{}) {
-	m := fmt.Sprintf(message, a...)
-	r.Recorder.Event(instance, "Normal", reason, m)
+func (r *KmakeReconciler) UpdateSubResource(status *bythepowerofv1.KmakeStatus, subresource SubResource, name string) {
+	if name == "" {
+		return
+	}
+	switch subresource {
+	case PVC:
+		status.Resources.Pvc = name
+	case EnvMap:
+		status.Resources.Env = name
+	case KmakeMap:
+		status.Resources.Kmake = name
+	}
+}
+
+func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase Phase, subresource SubResource, name string) {
+	m := ""
+	if name != "" {
+		m = fmt.Sprintf("%v %v (%v)", phase.String(), subresource.String(), name)
+	} else {
+		m = fmt.Sprintf("%v %v", phase.String(), subresource.String())
+	}
+	r.Recorder.Event(instance, "Normal", phase.String()+subresource.String(), m)
 
 	log := r.Log.WithValues("kmake", instance.GetName())
 	log.Info(m)
 
 	if instance.Status.Status != m {
 		instance.Status.Status = m
+		r.UpdateSubResource(&instance.Status, subresource, name)
 		r.Status().Update(context.Background(), instance)
 	}
 }
@@ -87,7 +107,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if instance.IsBeingDeleted() {
-		r.Event(instance, "Deleted", "Object finalizer is deleted")
+		r.Event(instance, Delete, Main, "")
 		return ctrl.Result{}, nil
 	}
 
@@ -99,21 +119,21 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Spec: instance.Spec.PersistentVolumeClaimTemplate,
 	}
 
-	log.Info(fmt.Sprintf("Checking pvc %v", NameConcat(instance, "pvc")))
+	log.Info(fmt.Sprintf("Checking pvc %v", NameConcat(instance.Status, PVC)))
 
-	err = r.Get(ctx, NamespacedNameConcat(instance, "pvc"), currentpvc)
+	err = r.Get(ctx, NamespacedNameConcat(instance, PVC), currentpvc)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found pvc %v", NameConcat(instance, "pvc")))
+			log.Info(fmt.Sprintf("Not found pvc %v", NameConcat(instance.Status, PVC)))
 
 			// create it
 			err = r.Create(ctx, requiredpvc)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			log.Info(fmt.Sprintf("Created pvc %v", NameConcat(instance, "pvc")))
+			log.Info(fmt.Sprintf("Created pvc %v", requiredpvc.ObjectMeta.Name))
 
-			r.Event(instance, "ProvisionPVC", "Created pvc %v", NameConcat(instance, "pvc"))
+			r.Event(instance, Provision, PVC, requiredpvc.ObjectMeta.Name)
 
 			return requeue, err
 
@@ -122,7 +142,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(reflect.DeepEqual(currentpvc.Spec.Resources, requiredpvc.Spec.Resources) &&
 		reflect.DeepEqual(currentpvc.ObjectMeta.Labels, requiredpvc.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete/recreate pvc %v", NameConcat(instance, "pvc")))
+		log.Info(fmt.Sprintf("delete/recreate pvc %v", NameConcat(instance.Status, PVC)))
 
 		// You don't seem to be able to update pvcs - even the labels so recreate
 		// the pvc will not relase if other jobs are in flight
@@ -133,18 +153,18 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, "DeletePVC", "Deleted pvc %v", NameConcat(instance, "pvc"))
+		r.Event(instance, Delete, PVC, "")
 		return requeue, nil
 	}
 
 	if currentpvc.Status.Phase != corev1.ClaimBound {
-		r.Event(instance, "BackofPV", "Backoff PV for %v - %v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase))
+		r.Event(instance, BackOff, PVC, currentpvc.ObjectMeta.Name)
 		return backoff5, nil
 	}
 
-	if strings.Contains(instance.Status.Status, "Backoff PV") {
+	if strings.Contains(instance.Status.Status, "BackOff PV") {
 		// so we need to rerun the master job to copy the files and makefile again
-		r.Event(instance, "ProvisionedPVC", "Provisioned pvc for %v -%v", NameConcat(instance, "pvc"), string(currentpvc.Status.Phase))
+		r.Event(instance, Provision, PVC, currentpvc.ObjectMeta.Name)
 	}
 	// env configmap
 
@@ -155,19 +175,19 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Data: instance.Spec.Variables,
 	}
 
-	log.Info(fmt.Sprintf("Checking env map %v", NameConcat(instance, "env")))
+	log.Info(fmt.Sprintf("Checking env map %v", NameConcat(instance.Status, EnvMap)))
 
-	err = r.Get(ctx, NamespacedNameConcat(instance, "env"), currentenvmap)
+	err = r.Get(ctx, NamespacedNameConcat(instance, EnvMap), currentenvmap)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found env map %v", NameConcat(instance, "env")))
+			log.Info(fmt.Sprintf("Not found env map %v", NameConcat(instance.Status, EnvMap)))
 
 			// create it
 			err = r.Create(ctx, requiredenvmap)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, "CreatedEnvMap", "Created env map %v", NameConcat(instance, "env"))
+			r.Event(instance, Provision, EnvMap, requiredenvmap.ObjectMeta.Name)
 			return requeue, err
 
 		}
@@ -175,7 +195,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(reflect.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
 		reflect.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("modify env map %v", NameConcat(instance, "env")))
+		log.Info(fmt.Sprintf("modify env map %v", NameConcat(instance.Status, EnvMap)))
 		currentenvmap.ObjectMeta.Labels = requiredenvmap.ObjectMeta.Labels
 		currentenvmap.Data = requiredenvmap.Data
 		err = r.Update(ctx, currentenvmap)
@@ -183,7 +203,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return reconcile.Result{}, err
 		}
 
-		r.Event(instance, "UpdatedEnvMap", "Updated %v", NameConcat(instance, "env"))
+		r.Event(instance, Update, EnvMap, currentenvmap.ObjectMeta.Name)
 		return requeue, nil
 	}
 
@@ -199,19 +219,19 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			"kmake.mk": m},
 	}
 
-	log.Info(fmt.Sprintf("Checking kmake map %v", NameConcat(instance, "kmake")))
+	log.Info(fmt.Sprintf("Checking kmake map %v", NameConcat(instance.Status, KmakeMap)))
 
-	err = r.Get(ctx, NamespacedNameConcat(instance, "kmake"), currentkmakemap)
+	err = r.Get(ctx, NamespacedNameConcat(instance, KmakeMap), currentkmakemap)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found kmake map %v", NameConcat(instance, "kmake")))
+			log.Info(fmt.Sprintf("Not found kmake map %v", NameConcat(instance.Status, KmakeMap)))
 
 			// create it
 			err = r.Create(ctx, requiredkmakemap)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, "CreatedKmakeMap", "Created kmake map %v", NameConcat(instance, "kmake"))
+			r.Event(instance, Provision, KmakeMap, requiredkmakemap.ObjectMeta.Name)
 			return requeue, err
 
 		}
@@ -219,7 +239,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(reflect.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
 		reflect.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("modify kmake map %v", NameConcat(instance, "kmake")))
+		log.Info(fmt.Sprintf("modify kmake map %v", NameConcat(instance.Status, KmakeMap)))
 		currentkmakemap.ObjectMeta.Labels = requiredkmakemap.ObjectMeta.Labels
 		currentkmakemap.Data = requiredkmakemap.Data
 		err = r.Update(ctx, currentkmakemap)
@@ -227,7 +247,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return reconcile.Result{}, err
 		}
 
-		r.Event(instance, "UpdatedKmakeMap", "Updated %v", NameConcat(instance, "kmake"))
+		r.Event(instance, Update, KmakeMap, currentkmakemap.ObjectMeta.Name)
 		return requeue, nil
 	}
 	return requeue, nil

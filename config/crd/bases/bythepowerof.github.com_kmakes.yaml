@@ -4824,17 +4824,11 @@ spec:
             kmake_resources:
               properties:
                 env:
-                  items:
-                    type: string
-                  type: array
+                  type: string
                 kmake:
-                  items:
-                    type: string
-                  type: array
+                  type: string
                 pvc:
-                  items:
-                    type: string
-                  type: array
+                  type: string
               type: object
             runs:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
