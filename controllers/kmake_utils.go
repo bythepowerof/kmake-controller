@@ -16,9 +16,6 @@ limitations under the License.
 package controllers
 
 import (
-	"fmt"
-	"strings"
-
 	// bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// "k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,55 +23,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type SubResource int
-
-const (
-	PVC SubResource = iota
-	EnvMap
-	KmakeMap
-	Main
-)
-
-func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main"}[d]
-}
-
-type Phase int
-
-const (
-	Provision Phase = iota
-	Delete
-	BackOff
-	Update
-)
-
-func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update"}[d]
-}
-
-func NamespacedNameConcat(owner *bythepowerofv1.Kmake, subresource SubResource) types.NamespacedName {
-	switch subresource {
-	case PVC:
+func NamespacedNameConcat(owner *bythepowerofv1.Kmake, subresource bythepowerofv1.SubResource) types.NamespacedName {
+	if _, ok := owner.Status.Resources[subresource.String()]; ok {
 		return types.NamespacedName{
 			Namespace: owner.GetNamespace(),
-			Name:      owner.Status.Resources.Pvc,
-		}
-	case EnvMap:
-		return types.NamespacedName{
-			Namespace: owner.GetNamespace(),
-			Name:      owner.Status.Resources.Env,
-		}
-	case KmakeMap:
-		return types.NamespacedName{
-			Namespace: owner.GetNamespace(),
-			Name:      owner.Status.Resources.Kmake,
+			Name:      owner.Status.Resources[subresource.String()],
 		}
 	}
-	return types.NamespacedName{}
+	return types.NamespacedName{
+		Namespace: owner.GetNamespace(),
+		Name:      "",
+	}
 }
 
 func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string) metav1.ObjectMeta {
-
 	return metav1.ObjectMeta{
 		Namespace:    namespacedName.Namespace,
 		GenerateName: namespacedName.Name + "-" + suffix + "-",
@@ -88,56 +50,4 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 			},
 		},
 	}
-}
-
-func NameConcat(status bythepowerofv1.KmakeStatus, subresource SubResource) string {
-	switch subresource {
-	case PVC:
-		return status.Resources.Pvc
-	case EnvMap:
-		return status.Resources.Env
-	case KmakeMap:
-		return status.Resources.Kmake
-	}
-	return ""
-
-}
-
-func ToMakefile(rules []bythepowerofv1.KmakeRule) (string, error) {
-	var b strings.Builder
-	hasTargetPattern := false
-
-	for _, rule := range rules {
-		for _, target := range rule.Targets {
-			fmt.Fprintf(&b, "%s ", target)
-		}
-
-		if rule.DoubleColon {
-			fmt.Fprint(&b, "::")
-		} else {
-			fmt.Fprint(&b, ":")
-		}
-
-		for _, pattern := range rule.TargetPatterns {
-			fmt.Fprintf(&b, "%s ", pattern)
-			hasTargetPattern = true
-		}
-
-		if hasTargetPattern {
-			fmt.Fprint(&b, ":")
-		}
-
-		for _, prereq := range rule.Prereqs {
-			fmt.Fprintf(&b, "%s ", prereq)
-		}
-
-		fmt.Fprint(&b, "\n")
-
-		for _, command := range rule.Commands {
-			fmt.Fprintf(&b, "\t%s\n", command)
-		}
-
-		fmt.Fprint(&b, "\n")
-	}
-	return b.String(), nil
 }
