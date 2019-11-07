@@ -185,7 +185,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, currentenvmap.ObjectMeta.Name)
+		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
 		return requeue, nil
 	}
 
@@ -196,7 +196,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	currentkmakemap := &corev1.ConfigMap{}
 	requiredkmakemap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env"),
 		Data: map[string]string{"kmake.yaml": string(y),
 			"kmake.mk": m},
 	}
@@ -225,7 +225,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, currentkmakemap.ObjectMeta.Name)
+		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
 		return requeue, nil
 	}
 	return requeue, nil
