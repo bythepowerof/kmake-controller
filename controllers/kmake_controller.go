@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -36,6 +35,7 @@ import (
 	// "k8s.io/kubernetes/pkg/api"
 	// "k8s.io/apimachinery/pkg/types"
 	// "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/equality"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -129,8 +129,8 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		return reconcile.Result{}, err
 	}
-	if !(reflect.DeepEqual(currentpvc.Spec.Resources, requiredpvc.Spec.Resources) &&
-		reflect.DeepEqual(currentpvc.ObjectMeta.Labels, requiredpvc.ObjectMeta.Labels)) {
+	if !(equality.Semantic.DeepEqual(currentpvc.Spec.Resources, requiredpvc.Spec.Resources) &&
+		equality.Semantic.DeepEqual(currentpvc.ObjectMeta.Labels, requiredpvc.ObjectMeta.Labels)) {
 		log.Info(fmt.Sprintf("delete/recreate pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
 
 		err = r.Delete(ctx, currentpvc)
@@ -178,8 +178,8 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		return reconcile.Result{}, err
 	}
-	if !(reflect.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
-		reflect.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
+	if !(equality.Semantic.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
+		equality.Semantic.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
 		log.Info(fmt.Sprintf("modify env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 		currentenvmap.ObjectMeta.Labels = requiredenvmap.ObjectMeta.Labels
 		currentenvmap.Data = requiredenvmap.Data
@@ -222,8 +222,8 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		return reconcile.Result{}, err
 	}
-	if !(reflect.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
-		reflect.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
+	if !(equality.Semantic.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
+		equality.Semantic.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
 		log.Info(fmt.Sprintf("modify kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
 		currentkmakemap.ObjectMeta.Labels = requiredkmakemap.ObjectMeta.Labels
 		currentkmakemap.Data = requiredkmakemap.Data
