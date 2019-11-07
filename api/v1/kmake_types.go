@@ -16,10 +16,39 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"strings"
+
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type SubResource int
+
+const (
+	PVC SubResource = iota
+	EnvMap
+	KmakeMap
+	Main
+)
+
+func (d SubResource) String() string {
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main"}[d]
+}
+
+type Phase int
+
+const (
+	Provision Phase = iota
+	Delete
+	BackOff
+	Update
+)
+
+func (d Phase) String() string {
+	return [...]string{"Provision", "Delete", "BackOff", "Update"}[d]
+}
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -39,13 +68,66 @@ type KmakeSpec struct {
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 
+func (kmake *KmakeSpec) ToMakefile() (string, error) {
+	var b strings.Builder
+	hasTargetPattern := false
+
+	for _, rule := range kmake.Rules {
+		for _, target := range rule.Targets {
+			fmt.Fprintf(&b, "%s ", target)
+		}
+
+		if rule.DoubleColon {
+			fmt.Fprint(&b, "::")
+		} else {
+			fmt.Fprint(&b, ":")
+		}
+
+		for _, pattern := range rule.TargetPatterns {
+			fmt.Fprintf(&b, "%s ", pattern)
+			hasTargetPattern = true
+		}
+
+		if hasTargetPattern {
+			fmt.Fprint(&b, ":")
+		}
+
+		for _, prereq := range rule.Prereqs {
+			fmt.Fprintf(&b, "%s ", prereq)
+		}
+
+		fmt.Fprint(&b, "\n")
+
+		for _, command := range rule.Commands {
+			fmt.Fprintf(&b, "\t%s\n", command)
+		}
+
+		fmt.Fprint(&b, "\n")
+	}
+	return b.String(), nil
+}
+
 // KmakeStatus defines the observed state of Kmake
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Runs      []KmakeRunStatus `json:"runs,omitempty"`
-	Status    string           `json:"status,omitempty"`
-	Resources KmakeResources   `json:"kmake_resources,omitempty"`
+	Runs      []KmakeRunStatus  `json:"runs,omitempty"`
+	Status    string            `json:"status,omitempty"`
+	Resources map[string]string `json:"kmake_resources,omitempty"`
+}
+
+func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name string) {
+	if name == "" {
+		return
+	}
+	if status.Resources == nil {
+		status.Resources = map[string]string{}
+	}
+	status.Resources[subresource.String()] = name
+}
+
+func (status *KmakeStatus) NameConcat(subresource SubResource) string {
+	return status.Resources[subresource.String()]
 }
 
 // Kmake is the Schema for the kmakes API
@@ -99,12 +181,6 @@ type KmakeRule struct {
 	Commands       []string `json:"commands,omitempty"`
 	Prereqs        []string `json:"prereqs,omitempty"`
 	TargetPatterns []string `json:"target_patterns,omitempty"`
-}
-
-type KmakeResources struct {
-	Pvc   string `json:"pvc,omitempty"`
-	Env   string `json:"env,omitempty"`
-	Kmake string `json:"kmake,omitempty"`
 }
 
 func init() {

@@ -4822,13 +4822,8 @@ spec:
           description: KmakeStatus defines the observed state of Kmake
           properties:
             kmake_resources:
-              properties:
-                env:
-                  type: string
-                kmake:
-                  type: string
-                pvc:
-                  type: string
+              additionalProperties:
+                type: string
               type: object
             runs:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
