@@ -180,15 +180,12 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(equality.Semantic.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
 		equality.Semantic.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("modify env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
-		currentenvmap.ObjectMeta.Labels = requiredenvmap.ObjectMeta.Labels
-		currentenvmap.Data = requiredenvmap.Data
-		err = r.Update(ctx, currentenvmap)
+		log.Info(fmt.Sprintf("delete env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+		err = r.Delete(ctx, currentenvmap)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-
-		r.Event(instance, bythepowerofv1.Update, bythepowerofv1.EnvMap, currentenvmap.ObjectMeta.Name)
+		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
 		return requeue, nil
 	}
 
@@ -199,7 +196,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	currentkmakemap := &corev1.ConfigMap{}
 	requiredkmakemap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env"),
 		Data: map[string]string{"kmake.yaml": string(y),
 			"kmake.mk": m},
 	}
@@ -218,21 +215,17 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
 			return requeue, err
-
 		}
 		return reconcile.Result{}, err
 	}
 	if !(equality.Semantic.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
 		equality.Semantic.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("modify kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
-		currentkmakemap.ObjectMeta.Labels = requiredkmakemap.ObjectMeta.Labels
-		currentkmakemap.Data = requiredkmakemap.Data
-		err = r.Update(ctx, currentkmakemap)
+		log.Info(fmt.Sprintf("delete kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
+		err = r.Delete(ctx, currentkmakemap)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-
-		r.Event(instance, bythepowerofv1.Update, bythepowerofv1.KmakeMap, currentkmakemap.ObjectMeta.Name)
+		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
 		return requeue, nil
 	}
 	return requeue, nil
