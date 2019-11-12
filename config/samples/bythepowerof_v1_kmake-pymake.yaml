@@ -1,0 +1,10 @@
+apiVersion: bythepowerof.github.com/v1
+kind: KmakeRun
+metadata:
+  generateName: kmakerun-pymake-
+spec:
+  image: kmake:5
+  command: ['tail']
+  args: ['-f']
+  kmake: kmake-sample
+  targets: [ '/dev/null']

@@ -6,6 +6,11 @@ metadata:
   creationTimestamp: null
   name: kmakeruns.bythepowerof.github.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.status
+    description: status of the run
+    name: Status
+    type: string
   group: bythepowerof.github.com
   names:
     kind: KmakeRun
@@ -13,6 +18,8 @@ spec:
     plural: kmakeruns
     singular: kmakerun
   scope: ""
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: KmakeRun is the Schema for the kmakeruns API
@@ -32,6 +39,14 @@ spec:
         spec:
           description: KmakeRunSpec defines the desired state of KmakeRun
           properties:
+            args:
+              items:
+                type: string
+              type: array
+            command:
+              items:
+                type: string
+              type: array
             image:
               description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                 Important: Run "make" to regenerate code after modifying this file'
@@ -48,10 +63,17 @@ spec:
         status:
           description: KmakeRunStatus defines the observed state of KmakeRun
           properties:
+            exit_code:
+              format: int64
+              type: integer
+            kmake_resources:
+              additionalProperties:
+                type: string
+              type: object
             start_time:
               format: int64
               type: integer
-            state_message:
+            status:
               type: string
             targets:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

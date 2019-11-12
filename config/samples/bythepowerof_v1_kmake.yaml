@@ -4,8 +4,7 @@ metadata:
   name: kmake-sample
   labels:
     labels: label1
-    label2: label2
-    label3: labelw
+    label2: label
 spec:
   # jobTemplate:
   #   spec:

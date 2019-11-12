@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type SubResource int
@@ -31,10 +31,12 @@ const (
 	EnvMap
 	KmakeMap
 	Main
+	KMAKE
+	Job
 )
 
 func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main"}[d]
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job"}[d]
 }
 
 type Phase int
@@ -44,10 +46,14 @@ const (
 	Delete
 	BackOff
 	Update
+	Error
+	Active
+	Success
+	Abort
 )
 
 func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update"}[d]
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort"}[d]
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -64,7 +70,7 @@ type KmakeSpec struct {
 	JobImage    string            `json:"job_image"`
 	Folders     []string          `json:"folders,omitempty"`
 
-	JobTemplate                   batchv1beta1.JobTemplateSpec     `json:"job_template,omitempty"`
+	JobTemplate                   corev1.PodTemplateSpec           `json:"job_template,omitempty"`
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 
@@ -133,7 +139,7 @@ func (status *KmakeStatus) NameConcat(subresource SubResource) string {
 // Kmake is the Schema for the kmakes API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="status of the kind"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="status of the kmake"
 // +kubebuilder:object:root=true
 
 type Kmake struct {
@@ -164,6 +170,23 @@ func (kmake *Kmake) AddFinalizer(finalizerName string) {
 
 func (kmake *Kmake) RemoveFinalizer(finalizerName string) {
 	kmake.ObjectMeta.Finalizers = removeString(kmake.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmake *Kmake) GetSubReference(s SubResource) string {
+	return kmake.Status.Resources[s.String()]
+}
+
+func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
+	if _, ok := kmake.Status.Resources[subresource.String()]; ok {
+		return types.NamespacedName{
+			Namespace: kmake.GetNamespace(),
+			Name:      kmake.Status.Resources[subresource.String()],
+		}
+	}
+	return types.NamespacedName{
+		Namespace: kmake.GetNamespace(),
+		Name:      "",
+	}
 }
 
 // +kubebuilder:object:root=true

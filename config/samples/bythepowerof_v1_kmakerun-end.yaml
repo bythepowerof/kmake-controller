@@ -1,9 +1,8 @@
 apiVersion: bythepowerof.github.com/v1
 kind: KmakeRun
 metadata:
-  generateName: kmakerun-sample-
+  generateName: kmakerun-sample-end-
 spec:
   image: jeremymarshall/make-test:1
   command: ['make']
   kmake: kmake-sample
-  targets: [ '.KMAKESLEEP']
