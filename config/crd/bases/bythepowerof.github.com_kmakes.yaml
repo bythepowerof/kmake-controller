@@ -4302,10 +4302,8 @@ spec:
                     items:
                       type: string
                     type: array
-                  target_patterns:
-                    items:
-                      type: string
-                    type: array
+                  targetpattern:
+                    type: string
                   targets:
                     items:
                       type: string

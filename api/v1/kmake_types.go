@@ -76,37 +76,25 @@ type KmakeSpec struct {
 
 func (kmake *KmakeSpec) ToMakefile() (string, error) {
 	var b strings.Builder
-	hasTargetPattern := false
 
 	for _, rule := range kmake.Rules {
-		for _, target := range rule.Targets {
-			fmt.Fprintf(&b, "%s ", target)
-		}
+		fmt.Fprintf(&b, "%s", strings.Join(rule.Targets[:], " "))
 
 		if rule.DoubleColon {
-			fmt.Fprint(&b, "::")
+			fmt.Fprint(&b, ":: ")
 		} else {
-			fmt.Fprint(&b, ":")
+			fmt.Fprint(&b, ": ")
 		}
 
-		for _, pattern := range rule.TargetPatterns {
-			fmt.Fprintf(&b, "%s ", pattern)
-			hasTargetPattern = true
+		if rule.TargetPattern != "" {
+			fmt.Fprintf(&b, "%s: ", rule.TargetPattern)
 		}
 
-		if hasTargetPattern {
-			fmt.Fprint(&b, ":")
-		}
-
-		for _, prereq := range rule.Prereqs {
-			fmt.Fprintf(&b, "%s ", prereq)
-		}
+		fmt.Fprintf(&b, "%s ", strings.Join(rule.Prereqs[:], " "))
 
 		fmt.Fprint(&b, "\n")
 
-		for _, command := range rule.Commands {
-			fmt.Fprintf(&b, "\t%s\n", command)
-		}
+		fmt.Fprintf(&b, "\t%s", strings.Join(rule.Commands[:], "\n\t"))
 
 		fmt.Fprint(&b, "\n")
 	}
@@ -199,11 +187,11 @@ type KmakeList struct {
 }
 
 type KmakeRule struct {
-	Targets        []string `json:"targets"`
-	DoubleColon    bool     `json:"doublecolon,omitempty"`
-	Commands       []string `json:"commands,omitempty"`
-	Prereqs        []string `json:"prereqs,omitempty"`
-	TargetPatterns []string `json:"target_patterns,omitempty"`
+	Targets       []string `json:"targets"`
+	DoubleColon   bool     `json:"doublecolon,omitempty"`
+	Commands      []string `json:"commands,omitempty"`
+	Prereqs       []string `json:"prereqs,omitempty"`
+	TargetPattern string   `json:"targetpattern,omitempty"`
 }
 
 func init() {

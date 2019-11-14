@@ -3,8 +3,11 @@ kind: KmakeRun
 metadata:
   generateName: kmakerun-pymake-
 spec:
-  image: kmake:5
-  command: ['tail']
-  args: ['-f']
+  image: kmake:8
   kmake: kmake-sample
-  targets: [ '/dev/null']
+  # command: ['tail']
+  # args: ['-f']
+  # targets: [ '/dev/null']
+  args: ['-z', '/usr/share/kmake/kmake.yaml']
+  # targets: [ '.KMAKESLEEP']  
+  targets: [ 'task1']

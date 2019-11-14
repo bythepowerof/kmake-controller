@@ -68,8 +68,7 @@ spec:
     doublecolon: true
     commands:
     - '@echo $*'
-    targetpatterns:
-    - file%
+    targetpattern: file%
   - targets:
     - file1
     doublecolon: true
@@ -118,7 +117,7 @@ spec:
     prereqs:
     - /Users/jeremymarshall/src/test
   - targets:
-    - (KMAKE_VOLUME)
+    - /tmp/kmake-vol
     - /Users/jeremymarshall/src/test
     doublecolon: false
     commands:
@@ -143,8 +142,9 @@ spec:
     TASKS: task2 task3
     VAR4: var4
     INC_VAR1: "'inc_var'"
-    KMAKE_VOLUME: /tmp/kmake-vol
-    KMAKE_WORKDIR: $(CURDIR)
+    KMAKE_VOLUME: /usr/share/pvc
+    KMAKE_WORKDIR: /kmake
+
 
 
 

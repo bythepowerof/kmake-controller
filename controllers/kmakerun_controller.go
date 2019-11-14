@@ -178,7 +178,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// give it a name
 	if requiredjob.Spec.Template.Spec.Containers[0].Name == "" {
 		requiredjob.Spec.Template.Spec.Containers[0].Name = "kmake-run"
-		
+
 	}
 
 	// use the command from here if there is one

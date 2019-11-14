@@ -191,7 +191,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// make yaml config map
 
-	y, err := yaml.Marshal(instance.Spec.Rules)
+	y, err := yaml.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
 	m, err := instance.Spec.ToMakefile()
 
 	currentkmakemap := &corev1.ConfigMap{}
