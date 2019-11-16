@@ -50,10 +50,11 @@ const (
 	Active
 	Success
 	Abort
+	Wait
 )
 
 func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort"}[d]
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait"}[d]
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -105,7 +106,7 @@ func (kmake *KmakeSpec) ToMakefile() (string, error) {
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Runs      []KmakeRunStatus  `json:"runs,omitempty"`
+	Runs      []*KmakeRuns      `json:"runs,omitempty"`
 	Status    string            `json:"status,omitempty"`
 	Resources map[string]string `json:"kmake_resources,omitempty"`
 }
@@ -122,6 +123,11 @@ func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name strin
 
 func (status *KmakeStatus) NameConcat(subresource SubResource) string {
 	return status.Resources[subresource.String()]
+}
+
+type KmakeRuns struct {
+	RunName  string `json:"run_name,omitempty"`
+	RunPhase string `json:"run_phase,omitempty"`
 }
 
 // Kmake is the Schema for the kmakes API

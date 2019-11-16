@@ -36,8 +36,9 @@ import (
 // KmakeRunReconciler reconciles a KmakeRun object
 type KmakeRunReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Recorder record.EventRecorder
+	Log         logr.Logger
+	Recorder    record.EventRecorder
+	KReconciler *KmakeReconciler
 }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakeruns,verbs=get;list;watch;create;update;patch;delete
@@ -94,6 +95,32 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
+	// get parent (kmake)
+	kmake := &bythepowerofv1.Kmake{}
+	log.Info(fmt.Sprintf("Checking kmake %v", instance.GetKmakeName()))
+	err = r.Get(ctx, types.NamespacedName{
+		Namespace: instance.GetNamespace(),
+		Name:      instance.GetKmakeName(),
+	}, kmake)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("Not found kmake %v", instance.GetKmakeName()))
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, instance.GetKmakeName())
+			// don't requeue
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	if instance.IsNew() {
+		// defer to its owner kmake to schedule it
+		// defer this so we don't get nested reconcile calls
+		defer r.KReconciler.AppendRun(kmake, instance)
+		r.Event(instance, bythepowerofv1.Wait, bythepowerofv1.Main, instance.GetName())
+
+		// don't requeue
+		return ctrl.Result{}, nil
+	}
+
 	if instance.IsActive() {
 		// check the job
 		currentjob := &v1.Job{}
@@ -132,26 +159,6 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return backoff5, nil
 		}
 	}
-
-	// get parent (kmake)
-	kmake := &bythepowerofv1.Kmake{}
-
-	log.Info(fmt.Sprintf("Checking kmake %v", instance.GetKmakeName()))
-
-	err = r.Get(ctx, types.NamespacedName{
-		Namespace: instance.GetNamespace(),
-		Name:      instance.GetKmakeName(),
-	}, kmake)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found kmake %v", instance.GetKmakeName()))
-			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, instance.GetKmakeName())
-			// don't requeue
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	// the parent defined should be the same  as the owner reference
 
 	// build the pod
 	requiredjob := &v1.Job{

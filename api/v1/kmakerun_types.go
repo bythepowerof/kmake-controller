@@ -40,12 +40,12 @@ type KmakeRunSpec struct {
 type KmakeRunStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Targets       []string          `json:"targets,omitempty"`
-	StartTime     int64             `json:"start_time,omitempty"`
-	TerminateTime int64             `json:"terminate_time,omitempty"`
-	Status        string            `json:"status,omitempty"`
-	ExicCode      int64             `json:"exit_code,omitempty"`
-	Resources     map[string]string `json:"kmake_resources,omitempty"`
+	// Targets       []string          `json:"targets,omitempty"`
+	// StartTime     int64             `json:"start_time,omitempty"`
+	// TerminateTime int64             `json:"terminate_time,omitempty"`
+	Status string `json:"status,omitempty"`
+	// ExicCode      int64             `json:"exit_code,omitempty"`
+	Resources map[string]string `json:"kmake_resources,omitempty"`
 }
 
 func (status *KmakeRunStatus) UpdateSubResource(subresource SubResource, name string) {
@@ -88,6 +88,10 @@ func (kmakeRun *KmakeRun) HasEnded() bool {
 func (kmakeRun *KmakeRun) IsActive() bool {
 	return strings.Contains(kmakeRun.Status.Status, "Provision") ||
 		strings.Contains(kmakeRun.Status.Status, "Active")
+}
+
+func (kmakeRun *KmakeRun) IsNew() bool {
+	return kmakeRun.Status.Status == ""
 }
 
 func (kmakeRun *KmakeRun) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
