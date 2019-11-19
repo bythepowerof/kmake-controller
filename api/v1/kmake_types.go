@@ -71,7 +71,7 @@ type KmakeSpec struct {
 	JobImage    string            `json:"job_image"`
 	Folders     []string          `json:"folders,omitempty"`
 
-	JobTemplate                   corev1.PodTemplateSpec           `json:"job_template,omitempty"`
+	JobTemplate                   corev1.PodTemplateSpec           `json:"job_template"`
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 

@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -49,7 +50,7 @@ type KmakeReconciler struct {
 	Recorder record.EventRecorder
 }
 
-func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) {
+func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
 	m := ""
 	if name != "" {
 		m = fmt.Sprintf("%v %v (%v)", phase.String(), subresource.String(), name)
@@ -68,7 +69,14 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
+		bytes, err := json.Marshal(instance.Status.Resources)
+		if err != nil {
+			return err
+		}
+		instance.Annotations["kmake.bythepowerof.com/kmake"] = string(bytes)
+		return r.Update(context.Background(), instance)
 	}
+	return nil
 }
 
 func (r *KmakeReconciler) AppendRun(kmake *bythepowerofv1.Kmake, run *bythepowerofv1.KmakeRun) {
@@ -104,7 +112,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if instance.IsBeingDeleted() {
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -130,8 +141,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 			log.Info(fmt.Sprintf("Created pvc %v", requiredpvc.ObjectMeta.Name))
 
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, requiredpvc.ObjectMeta.Name)
-
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, requiredpvc.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return requeue, err
 
 		}
@@ -145,18 +158,27 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.PVC, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.PVC, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return requeue, nil
 	}
 
 	if currentpvc.Status.Phase != corev1.ClaimBound {
-		r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		err = r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return backoff5, nil
 	}
 
 	if strings.Contains(instance.Status.Status, "BackOff PV") {
 		// so we need to rerun the master job to copy the files and makefile again
-		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// env configmap
@@ -180,7 +202,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return requeue, err
 
 		}
@@ -193,7 +218,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return requeue, nil
 	}
 
@@ -221,7 +249,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return requeue, err
 		}
 		return reconcile.Result{}, err
@@ -233,7 +264,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return requeue, nil
 	}
 	// return requeue, nil

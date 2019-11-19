@@ -20,20 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type SubResource int
-
-const (
-	PVC SubResource = iota
-	EnvMap
-	KmakeMap
-	Main
-	KMAKE
-	Job
-)
-
-func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job"}[d]
-}
 func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string, kind string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace:    namespacedName.Namespace,
@@ -47,41 +33,5 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 				UID:        owner.GetUID(),
 			},
 		},
-	}
-}
-
-type KmakeAnnotation struct {
-	Namespace string
-	Resources map[string]string `json:"kmake_resources,omitempty"`
-}
-
-func (kma *KmakeAnnotation) UpdateSubResource(subresource SubResource, name string) {
-	if name == "" {
-		return
-	}
-	if kma.Resources == nil {
-		kma.Resources = map[string]string{}
-	}
-	kma.Resources[subresource.String()] = name
-}
-
-func (kma *KmakeAnnotation) NameConcat(subresource SubResource) string {
-	return kma.Resources[subresource.String()]
-}
-
-func (kma *KmakeAnnotation) GetSubReference(s SubResource) string {
-	return kma.Resources[s.String()]
-}
-
-func (kma *KmakeAnnotation) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if _, ok := kma.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kma.GetNamespace(),
-			Name:      kma.Resources[subresource.String()],
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmake.GetNamespace(),
-		Name:      "",
 	}
 }

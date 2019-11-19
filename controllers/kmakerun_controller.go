@@ -114,7 +114,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if instance.IsNew() {
 		// defer to its owner kmake to schedule it
 		// defer this so we don't get nested reconcile calls
-		defer r.KReconciler.AppendRun(kmake, instance)
+		// defer r.KReconciler.AppendRun(kmake, instance)
 		r.Event(instance, bythepowerofv1.Wait, bythepowerofv1.Main, instance.GetName())
 
 		// don't requeue

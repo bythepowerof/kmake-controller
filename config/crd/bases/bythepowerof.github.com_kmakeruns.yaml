@@ -63,28 +63,18 @@ spec:
         status:
           description: KmakeRunStatus defines the observed state of KmakeRun
           properties:
-            exit_code:
-              format: int64
-              type: integer
             kmake_resources:
               additionalProperties:
                 type: string
+              description: ExicCode      int64             `json:"exit_code,omitempty"`
               type: object
-            start_time:
-              format: int64
-              type: integer
             status:
-              type: string
-            targets:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
-                this file'
-              items:
-                type: string
-              type: array
-            terminate_time:
-              format: int64
-              type: integer
+                this file Targets       []string          `json:"targets,omitempty"`
+                StartTime     int64             `json:"start_time,omitempty"` TerminateTime
+                int64             `json:"terminate_time,omitempty"`'
+              type: string
           type: object
       type: object
   version: v1
