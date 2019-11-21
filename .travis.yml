@@ -7,7 +7,7 @@ cache:
   directories:
   # this is installed with sudo :(
   # - /usr/local/kubebuilder
-  - /tmp/kubebuilder
+  - $HOME/tmp/kubebuilder
   - $HOME/.cache/go-build
   - $HOME/gopath/pkg/mod
 
