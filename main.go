@@ -62,21 +62,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	kmake := &controllers.KmakeReconciler{
+	if err = (&controllers.KmakeReconciler{
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("kmake"),
 		Recorder: mgr.GetEventRecorderFor("kmake-controller"),
-	}
-
-	if err = kmake.SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Kmake")
 		os.Exit(1)
 	}
 	if err = (&controllers.KmakeRunReconciler{
-		Client:      mgr.GetClient(),
-		Log:         ctrl.Log.WithName("controllers").WithName("kmake-run"),
-		Recorder:    mgr.GetEventRecorderFor("kmake-run"),
-		KReconciler: kmake,
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("kmake-run"),
+		Recorder: mgr.GetEventRecorderFor("kmake-run"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KmakeRun")
 		os.Exit(1)

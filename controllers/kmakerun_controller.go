@@ -36,9 +36,8 @@ import (
 // KmakeRunReconciler reconciles a KmakeRun object
 type KmakeRunReconciler struct {
 	client.Client
-	Log         logr.Logger
-	Recorder    record.EventRecorder
-	KReconciler *KmakeReconciler
+	Log      logr.Logger
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakeruns,verbs=get;list;watch;create;update;patch;delete
@@ -112,9 +111,6 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 	if instance.IsNew() {
-		// defer to its owner kmake to schedule it
-		// defer this so we don't get nested reconcile calls
-		// defer r.KReconciler.AppendRun(kmake, instance)
 		r.Event(instance, bythepowerofv1.Wait, bythepowerofv1.Main, instance.GetName())
 
 		// don't requeue
@@ -164,39 +160,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	requiredjob := &v1.Job{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KmakeRun"),
 	}
-	requiredjob.Spec.Template = kmake.Spec.JobTemplate
-
-	// use the image from here if there is one
-	if instance.Spec.Image != "" {
-		if requiredjob.Spec.Template.Spec.Containers == nil {
-			requiredjob.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
-		}
-		requiredjob.Spec.Template.Spec.Containers[0].Image = instance.Spec.Image
-	}
-
-	// use the image from here if there is one
-	if instance.Spec.Image != "" {
-		if requiredjob.Spec.Template.Spec.Containers == nil {
-			requiredjob.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
-		}
-		requiredjob.Spec.Template.Spec.Containers[0].Image = instance.Spec.Image
-	}
-
-	// give it a name
-	if requiredjob.Spec.Template.Spec.Containers[0].Name == "" {
-		requiredjob.Spec.Template.Spec.Containers[0].Name = "kmake-run"
-
-	}
-
-	// use the command from here if there is one
-	if instance.Spec.Command != nil {
-		requiredjob.Spec.Template.Spec.Containers[0].Command = instance.Spec.Command
-	}
-
-	// override the args
-	if instance.Spec.Args != nil {
-		requiredjob.Spec.Template.Spec.Containers[0].Args = instance.Spec.Args
-	}
+	requiredjob.Spec.Template = instance.Spec.JobTemplate
 
 	// add in the targets as args
 	if requiredjob.Spec.Template.Spec.Containers[0].Args == nil {

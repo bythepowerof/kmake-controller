@@ -18,6 +18,7 @@ package v1
 import (
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -29,11 +30,10 @@ import (
 type KmakeRunSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Image   string   `json:"image,omitempty"`
-	Command []string `json:"command,omitempty"`
-	Args    []string `json:"args,omitempty"`
-	Kmake   string   `json:"kmake"`
-	Targets []string `json:"targets,omitempty"`
+
+	// Kmake       string                 `json:"kmake"`
+	Targets     []string               `json:"targets,omitempty"`
+	JobTemplate corev1.PodTemplateSpec `json:"job_template"`
 }
 
 // KmakeRunStatus defines the observed state of KmakeRun
@@ -122,7 +122,13 @@ func (kmake *KmakeRun) RemoveFinalizer(finalizerName string) {
 }
 
 func (kmake *KmakeRun) GetKmakeName() string {
-	return kmake.Spec.Kmake
+	value, ok := kmake.ObjectMeta.Labels["bythepowerof.github.io/kmake"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
+	//return kmake.Spec.Kmake
 }
 
 // +kubebuilder:object:root=true

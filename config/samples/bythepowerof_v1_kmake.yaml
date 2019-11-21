@@ -1,24 +1,15 @@
 apiVersion: bythepowerof.github.com/v1
 kind: Kmake
 metadata:
-  name: kmake-test-app-part
+  name: kmake-test-app
   labels:
-    app.kubernetes.io/name: kmake-test-app-part
-    app.kubernetes.io/instance: kmake-test-app-part
+    app.kubernetes.io/name: kmake-test-app
+    app.kubernetes.io/instance: kmake-test-app
     app.kubernetes.io/version: "1.0.0"
     app.kubernetes.io/component: main
     app.kubernetes.io/part-of: kmake-test-app
-    app.kubernetes.io/managed-by: lmake
+    app.kubernetes.io/managed-by: kmake
 spec:
-  job_template:
-    spec:
-      containers:
-      - name: hello
-        image: busybox
-        args:
-        - /bin/sh
-        - -c
-        - date; echo Hello from the Kubernetes cluster
   persistent_volume_claim_template:
     storageClassName: manual
     accessModes:
@@ -26,8 +17,6 @@ spec:
     resources:
       requests:
         storage: 3Ki
-  master_image: busybox
-  job_image: busybox
   rules:
   - targets:
     - task1
