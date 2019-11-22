@@ -16,27 +16,11 @@ limitations under the License.
 package controllers
 
 import (
-	// bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/runtime/schema"
-	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func NamespacedNameConcat(owner *bythepowerofv1.Kmake, subresource bythepowerofv1.SubResource) types.NamespacedName {
-	if _, ok := owner.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: owner.GetNamespace(),
-			Name:      owner.Status.Resources[subresource.String()],
-		}
-	}
-	return types.NamespacedName{
-		Namespace: owner.GetNamespace(),
-		Name:      "",
-	}
-}
-
-func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string) metav1.ObjectMeta {
+func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string, kind string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace:    namespacedName.Namespace,
 		GenerateName: namespacedName.Name + "-" + suffix + "-",
@@ -44,7 +28,7 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 		OwnerReferences: []metav1.OwnerReference{
 			metav1.OwnerReference{
 				APIVersion: "bythepowerof.github.com/v1",
-				Kind:       "Kmake",
+				Kind:       kind,
 				Name:       owner.GetName(),
 				UID:        owner.GetUID(),
 			},

@@ -1,0 +1,20 @@
+apiVersion: bythepowerof.github.com/v1
+kind: KmakeRun
+metadata:
+  generateName: kmakerun-pymake-
+  labels:
+    app.kubernetes.io/name: kmakerun-pymake
+    app.kubernetes.io/instance: kmakerun-pymake
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: main
+    app.kubernetes.io/part-of: kmakerun-pymake
+    app.kubernetes.io/managed-by: kmake
+    bythepowerof.github.io/kmake: kmake-test-app
+spec:
+  job_template:
+    spec:
+      containers:
+      - name: hello
+        image: kmake:8
+        args: ['-z', '/usr/share/kmake/kmake.yaml']
+  targets: [ 'task1']

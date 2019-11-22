@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -49,7 +50,7 @@ type KmakeReconciler struct {
 	Recorder record.EventRecorder
 }
 
-func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) {
+func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
 	m := ""
 	if name != "" {
 		m = fmt.Sprintf("%v %v (%v)", phase.String(), subresource.String(), name)
@@ -68,7 +69,22 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
+		bytes, err := json.Marshal(instance.Status.Resources)
+		if err != nil {
+			return err
+		}
+		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
+		return r.Update(context.Background(), instance)
 	}
+	return nil
+}
+
+func (r *KmakeReconciler) AppendRun(kmake *bythepowerofv1.Kmake, run *bythepowerofv1.KmakeRun) {
+	kmake.Status.Runs = append(kmake.Status.Runs, &bythepowerofv1.KmakeRuns{
+		RunName:  run.GetName(),
+		RunPhase: bythepowerofv1.Wait.String(),
+	})
+	r.Status().Update(context.Background(), kmake)
 }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes,verbs=get;list;watch;create;update;patch;delete
@@ -96,21 +112,24 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if instance.IsBeingDeleted() {
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
 	// PVC
 	currentpvc := &corev1.PersistentVolumeClaim{}
 	requiredpvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc", "Kmake"),
 
 		Spec: instance.Spec.PersistentVolumeClaimTemplate,
 	}
 
 	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
 
-	err = r.Get(ctx, NamespacedNameConcat(instance, bythepowerofv1.PVC), currentpvc)
+	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.PVC), currentpvc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
@@ -122,8 +141,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 			log.Info(fmt.Sprintf("Created pvc %v", requiredpvc.ObjectMeta.Name))
 
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, requiredpvc.ObjectMeta.Name)
-
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, requiredpvc.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return requeue, err
 
 		}
@@ -137,32 +158,41 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.PVC, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.PVC, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return requeue, nil
 	}
 
 	if currentpvc.Status.Phase != corev1.ClaimBound {
-		r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		err = r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return backoff5, nil
 	}
 
 	if strings.Contains(instance.Status.Status, "BackOff PV") {
 		// so we need to rerun the master job to copy the files and makefile again
-		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.PVC, currentpvc.ObjectMeta.Name)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// env configmap
 
 	currentenvmap := &corev1.ConfigMap{}
 	requiredenvmap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env", "Kmake"),
 
 		Data: instance.Spec.Variables,
 	}
 
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
-	err = r.Get(ctx, NamespacedNameConcat(instance, bythepowerofv1.EnvMap), currentenvmap)
+	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
@@ -172,7 +202,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return requeue, err
 
 		}
@@ -185,25 +218,28 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return requeue, nil
 	}
 
 	// make yaml config map
 
-	y, err := yaml.Marshal(instance.Spec.Rules)
+	y, err := yaml.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
 	m, err := instance.Spec.ToMakefile()
 
 	currentkmakemap := &corev1.ConfigMap{}
 	requiredkmakemap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake", "Kmake"),
 		Data: map[string]string{"kmake.yaml": string(y),
 			"kmake.mk": m},
 	}
 
 	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
 
-	err = r.Get(ctx, NamespacedNameConcat(instance, bythepowerofv1.KmakeMap), currentkmakemap)
+	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.KmakeMap), currentkmakemap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
@@ -213,7 +249,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return requeue, err
 		}
 		return reconcile.Result{}, err
@@ -225,12 +264,14 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return requeue, nil
 	}
-	return requeue, nil
-
-	// return ctrl.Result{}, nil
+	// return requeue, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {

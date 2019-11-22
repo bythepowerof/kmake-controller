@@ -9,26 +9,6 @@ rules:
 - apiGroups:
   - bythepowerof.github.com
   resources:
-  - kmakeruns
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - bythepowerof.github.com
-  resources:
-  - kmakeruns/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - bythepowerof.github.com
-  resources:
   - kmakes
   verbs:
   - create

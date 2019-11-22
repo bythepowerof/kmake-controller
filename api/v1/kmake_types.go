@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type SubResource int
@@ -31,10 +31,12 @@ const (
 	EnvMap
 	KmakeMap
 	Main
+	KMAKE
+	Job
 )
 
 func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main"}[d]
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job"}[d]
 }
 
 type Phase int
@@ -44,10 +46,15 @@ const (
 	Delete
 	BackOff
 	Update
+	Error
+	Active
+	Success
+	Abort
+	Wait
 )
 
 func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update"}[d]
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait"}[d]
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -64,43 +71,30 @@ type KmakeSpec struct {
 	JobImage    string            `json:"job_image"`
 	Folders     []string          `json:"folders,omitempty"`
 
-	JobTemplate                   batchv1beta1.JobTemplateSpec     `json:"job_template,omitempty"`
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 
 func (kmake *KmakeSpec) ToMakefile() (string, error) {
 	var b strings.Builder
-	hasTargetPattern := false
 
 	for _, rule := range kmake.Rules {
-		for _, target := range rule.Targets {
-			fmt.Fprintf(&b, "%s ", target)
-		}
+		fmt.Fprintf(&b, "%s", strings.Join(rule.Targets[:], " "))
 
 		if rule.DoubleColon {
-			fmt.Fprint(&b, "::")
+			fmt.Fprint(&b, ":: ")
 		} else {
-			fmt.Fprint(&b, ":")
+			fmt.Fprint(&b, ": ")
 		}
 
-		for _, pattern := range rule.TargetPatterns {
-			fmt.Fprintf(&b, "%s ", pattern)
-			hasTargetPattern = true
+		if rule.TargetPattern != "" {
+			fmt.Fprintf(&b, "%s: ", rule.TargetPattern)
 		}
 
-		if hasTargetPattern {
-			fmt.Fprint(&b, ":")
-		}
-
-		for _, prereq := range rule.Prereqs {
-			fmt.Fprintf(&b, "%s ", prereq)
-		}
+		fmt.Fprintf(&b, "%s ", strings.Join(rule.Prereqs[:], " "))
 
 		fmt.Fprint(&b, "\n")
 
-		for _, command := range rule.Commands {
-			fmt.Fprintf(&b, "\t%s\n", command)
-		}
+		fmt.Fprintf(&b, "\t%s", strings.Join(rule.Commands[:], "\n\t"))
 
 		fmt.Fprint(&b, "\n")
 	}
@@ -111,7 +105,7 @@ func (kmake *KmakeSpec) ToMakefile() (string, error) {
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Runs      []KmakeRunStatus  `json:"runs,omitempty"`
+	Runs      []*KmakeRuns      `json:"runs,omitempty"`
 	Status    string            `json:"status,omitempty"`
 	Resources map[string]string `json:"kmake_resources,omitempty"`
 }
@@ -130,10 +124,15 @@ func (status *KmakeStatus) NameConcat(subresource SubResource) string {
 	return status.Resources[subresource.String()]
 }
 
+type KmakeRuns struct {
+	RunName  string `json:"run_name,omitempty"`
+	RunPhase string `json:"run_phase,omitempty"`
+}
+
 // Kmake is the Schema for the kmakes API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="status of the kind"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="status of the kmake"
 // +kubebuilder:object:root=true
 
 type Kmake struct {
@@ -166,6 +165,23 @@ func (kmake *Kmake) RemoveFinalizer(finalizerName string) {
 	kmake.ObjectMeta.Finalizers = removeString(kmake.ObjectMeta.Finalizers, finalizerName)
 }
 
+func (kmake *Kmake) GetSubReference(s SubResource) string {
+	return kmake.Status.Resources[s.String()]
+}
+
+func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
+	if _, ok := kmake.Status.Resources[subresource.String()]; ok {
+		return types.NamespacedName{
+			Namespace: kmake.GetNamespace(),
+			Name:      kmake.Status.Resources[subresource.String()],
+		}
+	}
+	return types.NamespacedName{
+		Namespace: kmake.GetNamespace(),
+		Name:      "",
+	}
+}
+
 // +kubebuilder:object:root=true
 
 // KmakeList contains a list of Kmake
@@ -176,11 +192,11 @@ type KmakeList struct {
 }
 
 type KmakeRule struct {
-	Targets        []string `json:"targets"`
-	DoubleColon    bool     `json:"doublecolon,omitempty"`
-	Commands       []string `json:"commands,omitempty"`
-	Prereqs        []string `json:"prereqs,omitempty"`
-	TargetPatterns []string `json:"target_patterns,omitempty"`
+	Targets       []string `json:"targets"`
+	DoubleColon   bool     `json:"doublecolon,omitempty"`
+	Commands      []string `json:"commands,omitempty"`
+	Prereqs       []string `json:"prereqs,omitempty"`
+	TargetPattern string   `json:"targetpattern,omitempty"`
 }
 
 func init() {
