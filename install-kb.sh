@@ -7,7 +7,7 @@ if [[ ! -d /usr/local/kubebuilder ]];then
 	arch=$(go env GOARCH)
 	version=2.2.0
 
-	if [[ ! -f ~/tmp/kubebuilder/kubebuilder_${version}_${os}_${arch} ]];then
+	if [[ ! -d ~/tmp/kubebuilder/kubebuilder_${version}_${os}_${arch} ]];then
 
 		# created by travis cache after first run
 		mkdir -p ~/tmp/kubebuilder
