@@ -156,148 +156,121 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	// build the pod
-	requiredjob := &v1.Job{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KmakeRun"),
-	}
-	requiredjob.Spec.Template = instance.Spec.JobTemplate
+	if instance.IsScheduled() {
 
-	// add in the targets as args
-	if requiredjob.Spec.Template.Spec.Containers[0].Args == nil {
-		requiredjob.Spec.Template.Spec.Containers[0].Args = instance.Spec.Targets
-	} else {
-		requiredjob.Spec.Template.Spec.Containers[0].Args = append(requiredjob.Spec.Template.Spec.Containers[0].Args, instance.Spec.Targets...)
-	}
-
-	// add in the env mount and env
-	if requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts == nil {
-		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
-		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
-			MountPath: "/usr/share/env",
-			Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
+		// build the pod
+		requiredjob := &v1.Job{
+			ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KmakeRun"),
 		}
-	} else {
-		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-			corev1.VolumeMount{
+		requiredjob.Spec.Template = instance.Spec.JobTemplate
+
+		// add in the targets as args
+		if requiredjob.Spec.Template.Spec.Containers[0].Args == nil {
+			requiredjob.Spec.Template.Spec.Containers[0].Args = instance.Spec.Targets
+		} else {
+			requiredjob.Spec.Template.Spec.Containers[0].Args = append(requiredjob.Spec.Template.Spec.Containers[0].Args, instance.Spec.Targets...)
+		}
+
+		// add in the env mount and env
+		if requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts == nil {
+			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
+			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
 				MountPath: "/usr/share/env",
 				Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
-			})
-	}
-
-	if requiredjob.Spec.Template.Spec.Volumes == nil {
-		requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-		requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
-			Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
-				},
-			},
+			}
+		} else {
+			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+				corev1.VolumeMount{
+					MountPath: "/usr/share/env",
+					Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
+				})
 		}
-	} else {
-		requiredjob.Spec.Template.Spec.Volumes = append(
-			requiredjob.Spec.Template.Spec.Volumes,
-			corev1.Volume{
+
+		if requiredjob.Spec.Template.Spec.Volumes == nil {
+			requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
+			requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
 				Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
 					},
 				},
+			}
+		} else {
+			requiredjob.Spec.Template.Spec.Volumes = append(
+				requiredjob.Spec.Template.Spec.Volumes,
+				corev1.Volume{
+					Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+						},
+					},
+				})
+		}
+
+		requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
+			requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
+			corev1.EnvFromSource{
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+				},
 			})
-	}
 
-	requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
-		requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
-		corev1.EnvFromSource{
-			ConfigMapRef: &corev1.ConfigMapEnvSource{
-				LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
-			},
-		})
+		// add in the pvc and mount
+		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				MountPath: "/usr/share/pvc",
+				Name:      kmake.GetSubReference(bythepowerofv1.PVC),
+			})
 
-	// add in the pvc and mount
-	requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-		corev1.VolumeMount{
-			MountPath: "/usr/share/pvc",
-			Name:      kmake.GetSubReference(bythepowerofv1.PVC),
-		})
-
-	requiredjob.Spec.Template.Spec.Volumes = append(
-		requiredjob.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: kmake.GetSubReference(bythepowerofv1.PVC),
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: kmake.GetSubReference(bythepowerofv1.PVC),
-					ReadOnly:  false,
+		requiredjob.Spec.Template.Spec.Volumes = append(
+			requiredjob.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: kmake.GetSubReference(bythepowerofv1.PVC),
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: kmake.GetSubReference(bythepowerofv1.PVC),
+						ReadOnly:  false,
+					},
 				},
-			},
-		})
+			})
 
-	// add in the kmake mount
-	requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-		corev1.VolumeMount{
-			MountPath: "/usr/share/kmake",
-			Name:      kmake.GetSubReference(bythepowerofv1.KmakeMap),
-		})
+		// add in the kmake mount
+		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				MountPath: "/usr/share/kmake",
+				Name:      kmake.GetSubReference(bythepowerofv1.KmakeMap),
+			})
 
-	requiredjob.Spec.Template.Spec.Volumes = append(
-		requiredjob.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: kmake.GetSubReference(bythepowerofv1.KmakeMap),
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.KmakeMap)},
+		requiredjob.Spec.Template.Spec.Volumes = append(
+			requiredjob.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: kmake.GetSubReference(bythepowerofv1.KmakeMap),
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.KmakeMap)},
+					},
 				},
-			},
-		})
+			})
 
-	// fix the restart policy
-	if requiredjob.Spec.Template.Spec.RestartPolicy == "" {
-		requiredjob.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+		// fix the restart policy
+		if requiredjob.Spec.Template.Spec.RestartPolicy == "" {
+			requiredjob.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+		}
+
+		// create it
+		err = r.Create(ctx, requiredjob)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
+			return reconcile.Result{}, err
+		}
+		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
+		return ctrl.Result{}, nil
 	}
-
-	// create it
-	err = r.Create(ctx, requiredjob)
-	if err != nil {
-		r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
-		return reconcile.Result{}, err
-	}
-	r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
-
-	// apiVersion: v1
-	// kind: Pod
-	// metadata:
-	//   name: kmake-sample-make
-	// spec:
-	//   volumes:
-	//     - name: kmake-sample-pvc
-	//       persistentVolumeClaim:
-	//         claimName: kmake-sample-pvc
-	//     - name: kmake-sample-env
-	//       configMap:
-	//         name: kmake-sample-env
-	//     - name: kmake-sample-kmake
-	//       configMap:
-	//         name: kmake-sample-kmake
-	//   containers:
-	//     - name: make-sample
-	//       image: jeremymarshall/make-test:1
-	//       command: ["make"]
-	//       args: [".KMAKESLEEP"]
-	//       envFrom:
-	//       - configMapRef:
-	//           name: kmake-sample-env
-	//       volumeMounts:
-	//         - mountPath: "/usr/share/env"
-	//           name: kmake-sample-env
-	//         - mountPath: "/usr/share/kmake"
-	//           name: kmake-sample-kmake
-	//         - mountPath: /usr/share/pvc
-	//           name: kmake-sample-pvc
 
 	return ctrl.Result{}, nil
 }

@@ -94,6 +94,10 @@ func (kmakeRun *KmakeRun) IsNew() bool {
 	return kmakeRun.Status.Status == ""
 }
 
+func (kmakeRun *KmakeRun) IsScheduled() bool {
+	return false
+}
+
 func (kmakeRun *KmakeRun) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
 	if _, ok := kmakeRun.Status.Resources[subresource.String()]; ok {
 		return types.NamespacedName{
