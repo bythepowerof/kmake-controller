@@ -33,10 +33,11 @@ const (
 	Main
 	KMAKE
 	Job
+	Runs
 )
 
 func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job"}[d]
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs"}[d]
 }
 
 type Phase int
@@ -65,11 +66,11 @@ type KmakeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	// Variables []KmakeVariable `json:"variables,omitempty"`
-	Variables   map[string]string `json:"variables,omitempty"`
-	Rules       []KmakeRule       `json:"rules"`
-	MasterImage string            `json:"master_image"`
-	JobImage    string            `json:"job_image"`
-	Folders     []string          `json:"folders,omitempty"`
+	Variables map[string]string `json:"variables,omitempty"`
+	Rules     []KmakeRule       `json:"rules"`
+	// MasterImage string            `json:"master_image"`
+	// JobImage    string            `json:"job_image"`
+	// Folders     []string          `json:"folders,omitempty"`
 
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
@@ -105,7 +106,7 @@ func (kmake *KmakeSpec) ToMakefile() (string, error) {
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Runs      []*KmakeRuns      `json:"runs,omitempty"`
+	// Runs      []*KmakeRuns      `json:"runs,omitempty"`
 	Status    string            `json:"status,omitempty"`
 	Resources map[string]string `json:"kmake_resources,omitempty"`
 }
@@ -124,10 +125,10 @@ func (status *KmakeStatus) NameConcat(subresource SubResource) string {
 	return status.Resources[subresource.String()]
 }
 
-type KmakeRuns struct {
-	RunName  string `json:"run_name,omitempty"`
-	RunPhase string `json:"run_phase,omitempty"`
-}
+// type KmakeRuns struct {
+// 	RunName  string `json:"run_name,omitempty"`
+// 	RunPhase string `json:"run_phase,omitempty"`
+// }
 
 // Kmake is the Schema for the kmakes API
 // +k8s:openapi-gen=true

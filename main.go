@@ -78,6 +78,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KmakeRun")
 		os.Exit(1)
 	}
+	if err = (&controllers.KmakeNowSchedulerReconciler{
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeNowScheduler"),
+		Recorder: mgr.GetEventRecorderFor("kmake-now-scheduler-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KmakeNowScheduler")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

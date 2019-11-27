@@ -10,6 +10,7 @@ metadata:
     app.kubernetes.io/part-of: kmakerun-pymake
     app.kubernetes.io/managed-by: kmake
     bythepowerof.github.io/kmake: kmake-test-app
+    bythepowerof.github.io/scheduler: now
 spec:
   job_template:
     spec:

@@ -8,3 +8,6 @@ resources:
 - group: bythepowerof
   version: v1
   kind: KmakeRun
+- group: bythepowerof
+  version: v1
+  kind: KmakeNowScheduler

@@ -1,0 +1,83 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: kmakenowschedulers.bythepowerof.github.com
+spec:
+  group: bythepowerof.github.com
+  names:
+    kind: KmakeNowScheduler
+    listKind: KmakeNowSchedulerList
+    plural: kmakenowschedulers
+    singular: kmakenowscheduler
+  scope: ""
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: KmakeNowScheduler is the Schema for the kmakenowschedulers API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: KmakeNowSchedulerSpec defines the desired state of KmakeNowScheduler
+          properties:
+            monitor:
+              items:
+                type: string
+              type: array
+            variables:
+              additionalProperties:
+                type: string
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
+              type: object
+          required:
+          - monitor
+          type: object
+        status:
+          description: KmakeNowSchedulerStatus defines the observed state of KmakeNowScheduler
+          properties:
+            kmake_resources:
+              additionalProperties:
+                type: string
+              type: object
+            runs:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              items:
+                properties:
+                  run_name:
+                    type: string
+                  run_phase:
+                    type: string
+                type: object
+              type: array
+            status:
+              type: string
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

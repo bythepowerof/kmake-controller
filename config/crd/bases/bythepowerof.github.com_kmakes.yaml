@@ -38,14 +38,6 @@ spec:
         spec:
           description: KmakeSpec defines the desired state of Kmake
           properties:
-            folders:
-              items:
-                type: string
-              type: array
-            job_image:
-              type: string
-            master_image:
-              type: string
             persistent_volume_claim_template:
               description: PersistentVolumeClaimSpec describes the common attributes
                 of storage devices and allows a Source for provider-specific attributes
@@ -191,8 +183,6 @@ spec:
                 Variables []KmakeVariable `json:"variables,omitempty"`'
               type: object
           required:
-          - job_image
-          - master_image
           - persistent_volume_claim_template
           - rules
           type: object
@@ -203,19 +193,10 @@ spec:
               additionalProperties:
                 type: string
               type: object
-            runs:
+            status:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
-                this file'
-              items:
-                properties:
-                  run_name:
-                    type: string
-                  run_phase:
-                    type: string
-                type: object
-              type: array
-            status:
+                this file Runs      []*KmakeRuns      `json:"runs,omitempty"`'
               type: string
           type: object
       type: object

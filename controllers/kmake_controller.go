@@ -79,13 +79,13 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 	return nil
 }
 
-func (r *KmakeReconciler) AppendRun(kmake *bythepowerofv1.Kmake, run *bythepowerofv1.KmakeRun) {
-	kmake.Status.Runs = append(kmake.Status.Runs, &bythepowerofv1.KmakeRuns{
-		RunName:  run.GetName(),
-		RunPhase: bythepowerofv1.Wait.String(),
-	})
-	r.Status().Update(context.Background(), kmake)
-}
+// func (r *KmakeReconciler) AppendRun(kmake *bythepowerofv1.Kmake, run *bythepowerofv1.KmakeRun) {
+// 	kmake.Status.Runs = append(kmake.Status.Runs, &bythepowerofv1.KmakeRuns{
+// 		RunName:  run.GetName(),
+// 		RunPhase: bythepowerofv1.Wait.String(),
+// 	})
+// 	r.Status().Update(context.Background(), kmake)
+// }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes/status,verbs=get;update;patch

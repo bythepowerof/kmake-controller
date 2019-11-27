@@ -9,6 +9,26 @@ rules:
 - apiGroups:
   - bythepowerof.github.com
   resources:
+  - kmakenowschedulers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bythepowerof.github.com
+  resources:
+  - kmakenowschedulers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - bythepowerof.github.com
+  resources:
   - kmakes
   verbs:
   - create
