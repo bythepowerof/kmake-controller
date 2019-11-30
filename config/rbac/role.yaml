@@ -46,3 +46,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - bythepowerof.github.com
+  resources:
+  - kmakescheduleruns
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bythepowerof.github.com
+  resources:
+  - kmakescheduleruns/status
+  verbs:
+  - get
+  - patch
+  - update

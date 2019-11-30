@@ -11,3 +11,6 @@ resources:
 - group: bythepowerof
   version: v1
   kind: KmakeNowScheduler
+- group: bythepowerof
+  version: v1
+  kind: KmakeScheduleRun

@@ -1,0 +1,9 @@
+apiVersion: bythepowerof.github.com/v1
+kind: KmakeScheduleRun
+metadata:
+  generateName: kmakeschedulerun-sample-
+spec:
+  operation:
+    start:
+      run: kmakerun-pymake-224dr
+      schedule: kmakenowscheduler-sample
