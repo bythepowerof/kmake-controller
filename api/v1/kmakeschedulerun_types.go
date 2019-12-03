@@ -17,6 +17,8 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"strings"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -30,53 +32,53 @@ type KmakeScheduleRunSpec struct {
 }
 
 type KmakeScheduleRunOperation struct {
-	KmakeScheduleRunStart `json:"start,omitempty"`
-	KmakeScheduleRunStop  `json:"stop,omitempty"`
-	KmakeScheduleDelete   `json:"delete,omitempty"`
-	KmakeScheduleCreate   `json:"create,omitempty"`
-	KmakeScheduleReset    `json:"reset,omitempty"`
-	KmakeScheduleForce    `json:"force,omitempty"`
+	Start  *KmakeScheduleRunStart `json:"start,omitempty" protobuf:"bytes,1,opt,name=start"`
+	Stop   *KmakeScheduleRunStop  `json:"stop,omitempty" protobuf:"bytes,2,opt,name=stop"`
+	Delete *KmakeScheduleDelete   `json:"delete,omitempty" protobuf:"bytes,3,opt,name=delete"`
+	Create *KmakeScheduleCreate   `json:"create,omitempty" protobuf:"bytes,4,opt,name=create"`
+	Reset  *KmakeScheduleReset    `json:"reset,omitempty" protobuf:"bytes,5,opt,name=reset"`
+	Force  *KmakeScheduleForce    `json:"force,omitempty" protobuf:"bytes,6,opt,name=force"`
 }
 
 type KmakeScheduleRunStart struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Run      string `json:"run,omitempty"`
-	Schedule string `json:"schedule,omitempty"`
+	// 	Run      string `json:"run,omitempty"`
+	// 	Schedule string `json:"schedule,omitempty"`
 }
 
 type KmakeScheduleRunStop struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Run string `json:"run,omitempty"`
+	// Run string `json:"run,omitempty"`
 }
 
 type KmakeScheduleDelete struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Schedule string `json:"schedule,omitempty"`
+	// Schedule string `json:"schedule,omitempty"`
 }
 
 type KmakeScheduleCreate struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Run      string `json:"run,omitempty"`
-	Schedule string `json:"schedule,omitempty"`
+	// Run      string `json:"run,omitempty"`
+	// Schedule string `json:"schedule,omitempty"`
 }
 
 type KmakeScheduleReset struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Run      string `json:"run,omitempty"`
-	Schedule string `json:"schedule,omitempty"`
-	Recurse  string `json:"recurse,omitempty"`
+	// Run      string `json:"run,omitempty"`
+	// Schedule string `json:"schedule,omitempty"`
+	Recurse string `json:"recurse,omitempty"`
 }
 
 type KmakeScheduleForce struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Run       string `json:"run,omitempty"`
-	Schedule  string `json:"schedule,omitempty"`
+	// Run       string `json:"run,omitempty"`
+	// Schedule  string `json:"schedule,omitempty"`
 	Operation string `json:"operation,omitempty"`
 	Recurse   string `json:"recurse,omitempty"`
 }
@@ -89,8 +91,21 @@ type KmakeScheduleRunStatus struct {
 	Resources map[string]string `json:"kmake_resources,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+func (status *KmakeScheduleRunStatus) UpdateSubResource(subresource SubResource, name string) {
+	if name == "" {
+		return
+	}
+	if status.Resources == nil {
+		status.Resources = map[string]string{}
+	}
+	status.Resources[subresource.String()] = name
+}
 
+func (status *KmakeScheduleRunStatus) NameConcat(subresource SubResource) string {
+	return status.Resources[subresource.String()]
+}
+
+// +kubebuilder:object:root=true
 // KmakeScheduleRun is the Schema for the kmakescheduleruns API
 // +kubebuilder:subresource:status
 // +k8s:openapi-gen=true
@@ -103,8 +118,43 @@ type KmakeScheduleRun struct {
 	Status KmakeScheduleRunStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+func (kmsr *KmakeScheduleRun) IsBeingDeleted() bool {
+	return !kmsr.ObjectMeta.DeletionTimestamp.IsZero()
+}
 
+func (kmsr *KmakeScheduleRun) HasEnded() bool {
+	return strings.Contains(kmsr.Status.Status, "Success") ||
+		strings.Contains(kmsr.Status.Status, "Error") ||
+		strings.Contains(kmsr.Status.Status, "Abort")
+}
+
+func (kmsr *KmakeScheduleRun) IsActive() bool {
+	return strings.Contains(kmsr.Status.Status, "Provision") ||
+		strings.Contains(kmsr.Status.Status, "Active")
+}
+
+func (kmsr *KmakeScheduleRun) IsNew() bool {
+	return kmsr.Status.Status == ""
+}
+
+func (kmsr *KmakeScheduleRun) IsScheduled() bool {
+	return false
+}
+
+func (kmsr *KmakeScheduleRun) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
+	if _, ok := kmsr.Status.Resources[subresource.String()]; ok {
+		return types.NamespacedName{
+			Namespace: kmsr.GetNamespace(),
+			Name:      kmsr.Status.Resources[subresource.String()],
+		}
+	}
+	return types.NamespacedName{
+		Namespace: kmsr.GetNamespace(),
+		Name:      "",
+	}
+}
+
+// +kubebuilder:object:root=true
 // KmakeScheduleRunList contains a list of KmakeScheduleRun
 type KmakeScheduleRunList struct {
 	metav1.TypeMeta `json:",inline"`

@@ -34,10 +34,11 @@ const (
 	KMAKE
 	Job
 	Runs
+	Schedule
 )
 
 func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs"}[d]
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule"}[d]
 }
 
 type Phase int

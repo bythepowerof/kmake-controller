@@ -148,7 +148,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// search for things label bythepowerof.github.io/scheduler
 
-	allRuns := make([]bythepowerofv1.KmakeRunXXX, 0)
+	allRuns := make([]bythepowerofv1.KmakeRunManifest, 0)
 
 	for _, element := range instance.Spec.Monitor {
 		runs := &bythepowerofv1.KmakeRunList{}
@@ -163,8 +163,16 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 
 		for _, run := range runs.Items {
-			xx := bythepowerofv1.KmakeRunXXX{RunName: run.GetName(), RunPhase: run.Status.Status}
-			allRuns = append(allRuns, xx)
+			if val, ok := run.GetObjectMeta().GetLabels()["bythepowerof.github.io/kmake"]; ok {
+				xx := bythepowerofv1.KmakeRunManifest{
+					RunName:   run.GetName(),
+					RunPhase:  run.Status.Status,
+					KmakeName: val,
+				}
+				allRuns = append(allRuns, xx)
+			} else {
+				log.Info(fmt.Sprintf("run %v not connected to kmake", run.Status.NameConcat(bythepowerofv1.Runs)))
+			}
 		}
 	}
 

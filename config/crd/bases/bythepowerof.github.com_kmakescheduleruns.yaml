@@ -44,66 +44,32 @@ spec:
                 Important: Run "make" to regenerate code after modifying this file'
               properties:
                 create:
-                  properties:
-                    run:
-                      description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
-                        of cluster Important: Run "make" to regenerate code after
-                        modifying this file'
-                      type: string
-                    schedule:
-                      type: string
                   type: object
                 delete:
-                  properties:
-                    schedule:
-                      description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
-                        of cluster Important: Run "make" to regenerate code after
-                        modifying this file'
-                      type: string
                   type: object
                 force:
                   properties:
                     operation:
-                      type: string
-                    recurse:
-                      type: string
-                    run:
                       description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
                         of cluster Important: Run "make" to regenerate code after
-                        modifying this file'
+                        modifying this file Run       string `json:"run,omitempty"`
+                        Schedule  string `json:"schedule,omitempty"`'
                       type: string
-                    schedule:
+                    recurse:
                       type: string
                   type: object
                 reset:
                   properties:
                     recurse:
-                      type: string
-                    run:
                       description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
                         of cluster Important: Run "make" to regenerate code after
-                        modifying this file'
-                      type: string
-                    schedule:
+                        modifying this file Run      string `json:"run,omitempty"`
+                        Schedule string `json:"schedule,omitempty"`'
                       type: string
                   type: object
                 start:
-                  properties:
-                    run:
-                      description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
-                        of cluster Important: Run "make" to regenerate code after
-                        modifying this file'
-                      type: string
-                    schedule:
-                      type: string
                   type: object
                 stop:
-                  properties:
-                    run:
-                      description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
-                        of cluster Important: Run "make" to regenerate code after
-                        modifying this file'
-                      type: string
                   type: object
               type: object
           required:

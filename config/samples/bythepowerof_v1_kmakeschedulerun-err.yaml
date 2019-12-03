@@ -5,7 +5,7 @@ metadata:
   labels:
     bythepowerof.github.io/kmake: kmake-test-app
     bythepowerof.github.io/schedule: kmakenowscheduler-sample
-    bythepowerof.github.io/run: kmakerun-pymake-224dr
+    bythepowerof.github.io/run: kmakerun-sample-err-556rn
 spec: 
   operation:
     start: {}

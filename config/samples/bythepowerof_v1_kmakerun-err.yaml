@@ -2,8 +2,20 @@ apiVersion: bythepowerof.github.com/v1
 kind: KmakeRun
 metadata:
   generateName: kmakerun-sample-err-
+  labels:
+    app.kubernetes.io/name: kmakerun-make
+    app.kubernetes.io/instance: kmakerun-err
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: main
+    app.kubernetes.io/part-of: kmakerun-make
+    app.kubernetes.io/managed-by: kmake
+    bythepowerof.github.io/kmake: kmake-test-app
+    bythepowerof.github.io/scheduler: now
 spec:
-  image: jeremymarshall/make-test:1
-  command: ['make']
-  kmake: kmake-sample
+  job_template:
+    spec:
+      containers:
+      - name: hello
+        image: jeremymarshall/make-test:1
+        args: ['-f', '/usr/share/kmake/kmake.mk']
   targets: [ 'xxx']

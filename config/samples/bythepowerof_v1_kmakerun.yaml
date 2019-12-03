@@ -18,5 +18,4 @@ spec:
       - name: hello
         image: jeremymarshall/make-test:1
         args: ['-f', '/usr/share/kmake/kmake.mk']
-  kmake: kmake-sample
   targets: [ '.KMAKESLEEP']
