@@ -154,6 +154,42 @@ func (kmsr *KmakeScheduleRun) NamespacedNameConcat(subresource SubResource) type
 	}
 }
 
+func (kmsr *KmakeScheduleRun) GetKmakeName() string {
+	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/kmake"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
+}
+
+func (kmsr *KmakeScheduleRun) GetKmakeRunName() string {
+	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/run"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
+}
+
+func (kmsr *KmakeScheduleRun) GetKmakeScheduleName() string {
+	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/schedule"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
+}
+
+func (kmsr *KmakeScheduleRun) GetKmakeScheduleEnvName() string {
+	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/schedule-env"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
+}
+
 // +kubebuilder:object:root=true
 // KmakeScheduleRunList contains a list of KmakeScheduleRun
 type KmakeScheduleRunList struct {

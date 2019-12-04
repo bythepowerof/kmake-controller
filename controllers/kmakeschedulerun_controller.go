@@ -114,22 +114,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	if instance.Spec.Start != nil {
 
-		var kmakename, kmakerun, scheduler string
-		var ok bool
-
-		if kmakename, ok = instance.GetObjectMeta().GetLabels()["bythepowerof.github.io/kmake"]; !ok {
-			r.Event(instance, bythepowerofv1.Abort, bythepowerofv1.KMAKE, instance.GetName())
-			return reconcile.Result{}, nil
-		}
-		if kmakerun, ok = instance.GetObjectMeta().GetLabels()["bythepowerof.github.io/run"]; !ok {
-			r.Event(instance, bythepowerofv1.Abort, bythepowerofv1.Runs, instance.GetName())
-			return reconcile.Result{}, nil
-		}
-		if scheduler, ok = instance.GetObjectMeta().GetLabels()["bythepowerof.github.io/schedule"]; !ok {
-			r.Event(instance, bythepowerofv1.Abort, bythepowerofv1.Schedule, instance.GetName())
-			return reconcile.Result{}, nil
-		}
-		_ = scheduler
+		kmakename := instance.GetKmakeName()
+		kmakerun := instance.GetKmakeRunName()
+		kmakescheduleEnv := instance.GetKmakeScheduleEnvName()
 
 		// get kmakerun
 		run := &bythepowerofv1.KmakeRun{}
@@ -147,13 +134,6 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return ctrl.Result{}, nil
 		}
 
-		// if instance.IsNew() {
-		// 	r.Event(instance, bythepowerofv1.Wait, bythepowerofv1.Main, instance.GetName())
-
-		// 	// don't requeue
-		// 	return ctrl.Result{}, nil
-		// }
-
 		if instance.IsActive() {
 			// check the job
 			currentjob := &v1.Job{}
@@ -170,13 +150,6 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					return reconcile.Result{}, err
 				}
 			} else {
-				// check the status
-				// if currentjob.Status.Failed > 5 &&  currentjob.Status.Active > 0{
-				// 	// r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, currentjob.GetName())
-				// 	// try do scale to zero as its flapping
-				// 	currentjob.Sca
-				// 	return ctrl.Result{}, nil
-				// }
 				if currentjob.Status.Active > 0 {
 					r.Event(instance, bythepowerofv1.Active, bythepowerofv1.Job, currentjob.GetName())
 					return backoff5, nil
@@ -193,18 +166,16 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			}
 		}
 
-		// if instance.IsScheduled() {
-		// get parent (kmake)
 		kmake := &bythepowerofv1.Kmake{}
 		log.Info(fmt.Sprintf("Checking kmake %v", kmakename))
 		err = r.Get(ctx, types.NamespacedName{
 			Namespace: run.GetNamespace(),
-			Name:      run.GetKmakeName(),
+			Name:      kmakename,
 		}, kmake)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.Info(fmt.Sprintf("Not found kmake %v", run.GetKmakeName()))
-				r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, run.GetKmakeName())
+				log.Info(fmt.Sprintf("Not found kmake %v", kmakename))
+				r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, kmakename)
 				// don't requeue
 				return ctrl.Result{}, nil
 			}
@@ -267,6 +238,33 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			corev1.EnvFromSource{
 				ConfigMapRef: &corev1.ConfigMapEnvSource{
 					LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+				},
+			})
+
+		// add in the sched env mount and env
+		requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				MountPath: "/usr/share/schedule",
+				Name:      kmakescheduleEnv,
+			})
+
+		requiredjob.Spec.Template.Spec.Volumes = append(
+			requiredjob.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: kmakescheduleEnv,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: kmakescheduleEnv},
+					},
+				},
+			})
+
+		requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
+			requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
+			corev1.EnvFromSource{
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: kmakescheduleEnv},
 				},
 			})
 
