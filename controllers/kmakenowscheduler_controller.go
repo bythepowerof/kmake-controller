@@ -148,8 +148,13 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// search for things label bythepowerof.github.io/scheduler
 
-	allRuns := make([]bythepowerofv1.KmakeRunManifest, 0)
+	allRuns := append([]bythepowerofv1.KmakeRunManifest(nil), instance.Status.Runs...)
+	for j := 0; j < len(allRuns); j++ {
+		element := &allRuns[j]
+		element.RunPhase = "Deleted"
+	}
 
+	// look at thr kmakerun items
 	for _, element := range instance.Spec.Monitor {
 		runs := &bythepowerofv1.KmakeRunList{}
 		opts := []client.ListOption{
@@ -169,10 +174,57 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					RunPhase:  run.Status.Status,
 					KmakeName: val,
 				}
-				allRuns = append(allRuns, xx)
+
+				found := false
+
+				for j := 0; j < len(allRuns); j++ {
+					i := &allRuns[j]
+					if i.RunName == xx.RunName {
+						// i.RunPhase = xx.RunPhase
+						// i.KmakeName = xx.KmakeName
+						found = true
+						break
+					}
+				}
+				if !found {
+					allRuns = append(allRuns, xx)
+				}
 			} else {
 				log.Info(fmt.Sprintf("run %v not connected to kmake", run.Status.NameConcat(bythepowerofv1.Runs)))
 			}
+		}
+	}
+
+	// look at the scheduleruns just for this instance...
+	runs := &bythepowerofv1.KmakeScheduleRunList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{"bythepowerof.github.io/schedule": instance.GetName()},
+	}
+	err = r.List(ctx, runs, opts...)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	for _, run := range runs.Items {
+		xx := bythepowerofv1.KmakeRunManifest{
+			RunName:   run.GetKmakeRunName(),
+			RunPhase:  run.Status.Status,
+			KmakeName: run.GetKmakeName(),
+		}
+		found := false
+
+		for j := 0; j < len(allRuns); j++ {
+			i := &allRuns[j]
+
+			if i.RunName == xx.RunName {
+				i.RunPhase = xx.RunPhase
+				i.KmakeName = xx.KmakeName
+				found = true
+				break
+			}
+		}
+		if !found {
+			allRuns = append(allRuns, xx)
 		}
 	}
 
