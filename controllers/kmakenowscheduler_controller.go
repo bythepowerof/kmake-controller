@@ -170,8 +170,9 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		for _, run := range runs.Items {
 			if val, ok := run.GetObjectMeta().GetLabels()["bythepowerof.github.io/kmake"]; ok {
 				xx := bythepowerofv1.KmakeRunManifest{
-					RunName:   run.GetName(),
-					RunPhase:  run.Status.Status,
+					RunName: run.GetName(),
+					// RunPhase:  run.Status.Status,
+					RunPhase:  "Provisioning",
 					KmakeName: val,
 				}
 
@@ -187,6 +188,31 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					}
 				}
 				if !found {
+					kmsr := &bythepowerofv1.KmakeScheduleRun{
+						ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmsr", "KmakeNowScheduler"),
+						Spec: bythepowerofv1.KmakeScheduleRunSpec{
+							KmakeScheduleRunOperation: bythepowerofv1.KmakeScheduleRunOperation{
+								Start: &bythepowerofv1.KmakeScheduleRunStart{},
+							},
+						},
+					}
+					kmsr.SetLabels(map[string]string{
+						"bythepowerof.github.io/kmake":        xx.KmakeName,
+						"bythepowerof.github.io/schedule":     instance.Name,
+						"bythepowerof.github.io/schedule-env": currentenvmap.GetName(),
+						"bythepowerof.github.io/run":          xx.RunName,
+					},
+					)
+
+					err = r.Create(ctx, kmsr)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+					err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Runs, "")
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+					// return requeue, nil
 					allRuns = append(allRuns, xx)
 				}
 			} else {
