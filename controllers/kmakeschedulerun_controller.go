@@ -129,10 +129,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return reconcile.Result{}, err
 		}
 
-		if run.IsBeingDeleted() {
-			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
-			return ctrl.Result{}, nil
-		}
+		// if run.IsBeingDeleted() {
+		// 	r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		// 	return ctrl.Result{}, nil
+		// }
 
 		if instance.IsActive() {
 			// check the job

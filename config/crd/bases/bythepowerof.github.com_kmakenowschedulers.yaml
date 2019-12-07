@@ -66,6 +66,8 @@ spec:
                     type: string
                   run_phase:
                     type: string
+                  run_type:
+                    type: string
                 type: object
               type: array
             status:

@@ -170,10 +170,10 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		for _, run := range runs.Items {
 			if val, ok := run.GetObjectMeta().GetLabels()["bythepowerof.github.io/kmake"]; ok {
 				xx := bythepowerofv1.KmakeRunManifest{
-					RunName: run.GetName(),
-					// RunPhase:  run.Status.Status,
+					RunName:   run.GetName(),
 					RunPhase:  "Provisioning",
 					KmakeName: val,
+					RunType:   "Start",
 				}
 
 				found := false
@@ -197,10 +197,10 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 						},
 					}
 					kmsr.SetLabels(map[string]string{
-						"bythepowerof.github.io/kmake":        xx.KmakeName,
-						"bythepowerof.github.io/schedule":     instance.Name,
-						"bythepowerof.github.io/schedule-env": currentenvmap.GetName(),
-						"bythepowerof.github.io/run":          xx.RunName,
+						"bythepowerof.github.io/kmake":             xx.KmakeName,
+						"bythepowerof.github.io/schedule-instance": instance.Name,
+						"bythepowerof.github.io/schedule-env":      currentenvmap.GetName(),
+						"bythepowerof.github.io/run":               xx.RunName,
 					},
 					)
 
@@ -216,7 +216,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					allRuns = append(allRuns, xx)
 				}
 			} else {
-				log.Info(fmt.Sprintf("run %v not connected to kmake", run.Status.NameConcat(bythepowerofv1.Runs)))
+				log.Info(fmt.Sprintf("run %v not connected to kmake", instance.GetName()))
 			}
 		}
 	}
@@ -224,7 +224,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// look at the scheduleruns just for this instance...
 	runs := &bythepowerofv1.KmakeScheduleRunList{}
 	opts := []client.ListOption{
-		client.MatchingLabels{"bythepowerof.github.io/schedule": instance.GetName()},
+		client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
 	}
 	err = r.List(ctx, runs, opts...)
 	if err != nil {
@@ -232,10 +232,18 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	for _, run := range runs.Items {
+
+		runType, err := json.Marshal(run.Spec.KmakeScheduleRunOperation)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		log.Info(fmt.Sprintf("found kmsr %b", runType))
+
 		xx := bythepowerofv1.KmakeRunManifest{
 			RunName:   run.GetKmakeRunName(),
 			RunPhase:  run.Status.Status,
 			KmakeName: run.GetKmakeName(),
+			RunType:   "Start",
 		}
 		found := false
 

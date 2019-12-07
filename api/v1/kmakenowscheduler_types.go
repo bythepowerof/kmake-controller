@@ -35,6 +35,7 @@ type KmakeRunManifest struct {
 	KmakeName string `json:"kmake_name,omitempty"`
 	RunName   string `json:"run_name,omitempty"`
 	RunPhase  string `json:"run_phase,omitempty"`
+	RunType   string `json:"run_type,omitempty"`
 }
 
 // KmakeNowSchedulerStatus defines the observed state of KmakeNowScheduler

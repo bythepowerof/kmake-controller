@@ -16,11 +16,8 @@ limitations under the License.
 package v1
 
 import (
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -30,8 +27,6 @@ import (
 type KmakeRunSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Kmake       string                 `json:"kmake"`
 	Targets     []string               `json:"targets,omitempty"`
 	JobTemplate corev1.PodTemplateSpec `json:"job_template"`
 }
@@ -40,103 +35,21 @@ type KmakeRunSpec struct {
 type KmakeRunStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Targets       []string          `json:"targets,omitempty"`
-	// StartTime     int64             `json:"start_time,omitempty"`
-	// TerminateTime int64             `json:"terminate_time,omitempty"`
 	Status string `json:"status,omitempty"`
-	// ExicCode      int64             `json:"exit_code,omitempty"`
-	Resources map[string]string `json:"kmake_resources,omitempty"`
-}
-
-func (status *KmakeRunStatus) UpdateSubResource(subresource SubResource, name string) {
-	if name == "" {
-		return
-	}
-	if status.Resources == nil {
-		status.Resources = map[string]string{}
-	}
-	status.Resources[subresource.String()] = name
-}
-
-func (status *KmakeRunStatus) NameConcat(subresource SubResource) string {
-	return status.Resources[subresource.String()]
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="status of the run"
 // +k8s:openapi-gen=true
 // KmakeRun is the Schema for the kmakeruns API
 type KmakeRun struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KmakeRunSpec   `json:"spec,omitempty"`
-	Status KmakeRunStatus `json:"status,omitempty"`
-}
-
-func (kmakeRun *KmakeRun) IsBeingDeleted() bool {
-	return !kmakeRun.ObjectMeta.DeletionTimestamp.IsZero()
-}
-
-func (kmakeRun *KmakeRun) HasEnded() bool {
-	return strings.Contains(kmakeRun.Status.Status, "Success") ||
-		strings.Contains(kmakeRun.Status.Status, "Error") ||
-		strings.Contains(kmakeRun.Status.Status, "Abort")
-}
-
-func (kmakeRun *KmakeRun) IsActive() bool {
-	return strings.Contains(kmakeRun.Status.Status, "Provision") ||
-		strings.Contains(kmakeRun.Status.Status, "Active")
-}
-
-func (kmakeRun *KmakeRun) IsNew() bool {
-	return kmakeRun.Status.Status == ""
-}
-
-func (kmakeRun *KmakeRun) IsScheduled() bool {
-	return false
-}
-
-func (kmakeRun *KmakeRun) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if _, ok := kmakeRun.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kmakeRun.GetNamespace(),
-			Name:      kmakeRun.Status.Resources[subresource.String()],
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmakeRun.GetNamespace(),
-		Name:      "",
-	}
-}
-
-const KmakeRunFinalizerName = "kmakerun.finalizers.bythepowerof.github.com"
-
-func (kmakeRun *KmakeRun) HasFinalizer(finalizerName string) bool {
-	return containsString(kmakeRun.ObjectMeta.Finalizers, finalizerName)
-}
-
-func (kmake *KmakeRun) AddFinalizer(finalizerName string) {
-	kmake.ObjectMeta.Finalizers = append(kmake.ObjectMeta.Finalizers, finalizerName)
-}
-
-func (kmake *KmakeRun) RemoveFinalizer(finalizerName string) {
-	kmake.ObjectMeta.Finalizers = removeString(kmake.ObjectMeta.Finalizers, finalizerName)
-}
-
-func (kmake *KmakeRun) GetKmakeName() string {
-	value, ok := kmake.ObjectMeta.Labels["bythepowerof.github.io/kmake"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
-	//return kmake.Spec.Kmake
+	Spec KmakeRunSpec `json:"spec,omitempty"`
+	// Status KmakeRunStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-
 // KmakeRunList contains a list of KmakeRun
 type KmakeRunList struct {
 	metav1.TypeMeta `json:",inline"`
