@@ -32,12 +32,12 @@ type KmakeScheduleRunSpec struct {
 }
 
 type KmakeScheduleRunOperation struct {
-	Start  *KmakeScheduleRunStart `json:"start,omitempty" protobuf:"bytes,1,opt,name=start"`
-	Stop   *KmakeScheduleRunStop  `json:"stop,omitempty" protobuf:"bytes,2,opt,name=stop"`
-	Delete *KmakeScheduleDelete   `json:"delete,omitempty" protobuf:"bytes,3,opt,name=delete"`
-	Create *KmakeScheduleCreate   `json:"create,omitempty" protobuf:"bytes,4,opt,name=create"`
-	Reset  *KmakeScheduleReset    `json:"reset,omitempty" protobuf:"bytes,5,opt,name=reset"`
-	Force  *KmakeScheduleForce    `json:"force,omitempty" protobuf:"bytes,6,opt,name=force"`
+	Start  *KmakeScheduleRunStart `json:"start,omitempty"`
+	Stop   *KmakeScheduleRunStop  `json:"stop,omitempty"`
+	Delete *KmakeScheduleDelete   `json:"delete,omitempty"`
+	Create *KmakeScheduleCreate   `json:"create,omitempty"`
+	Reset  *KmakeScheduleReset    `json:"reset,omitempty"`
+	Force  *KmakeScheduleForce    `json:"force,omitempty"`
 }
 
 type KmakeScheduleRunStart struct {
@@ -69,9 +69,8 @@ type KmakeScheduleCreate struct {
 type KmakeScheduleReset struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Run      string `json:"run,omitempty"`
-	// Schedule string `json:"schedule,omitempty"`
 	Recurse string `json:"recurse,omitempty"`
+	Full    string `json:"full,omitempty"`
 }
 
 type KmakeScheduleForce struct {

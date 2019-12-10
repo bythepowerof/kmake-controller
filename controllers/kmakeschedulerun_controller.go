@@ -129,11 +129,6 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return reconcile.Result{}, err
 		}
 
-		// if run.IsBeingDeleted() {
-		// 	r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
-		// 	return ctrl.Result{}, nil
-		// }
-
 		if instance.IsActive() {
 			// check the job
 			currentjob := &v1.Job{}
@@ -321,7 +316,22 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
 		return ctrl.Result{}, nil
 	}
-	// }
+
+	var runType map[string]*json.RawMessage
+	data, err := json.Marshal(instance.Spec.KmakeScheduleRunOperation)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	err = json.Unmarshal(data, &runType)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	for k := range runType {
+		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Schedule, k)
+		break
+	}
+
 	return ctrl.Result{}, nil
 }
 

@@ -60,11 +60,12 @@ spec:
                   type: object
                 reset:
                   properties:
+                    full:
+                      type: string
                     recurse:
                       description: 'INSERT ADDITIONAL SPEC FIELDS - desired state
                         of cluster Important: Run "make" to regenerate code after
-                        modifying this file Run      string `json:"run,omitempty"`
-                        Schedule string `json:"schedule,omitempty"`'
+                        modifying this file'
                       type: string
                   type: object
                 start:

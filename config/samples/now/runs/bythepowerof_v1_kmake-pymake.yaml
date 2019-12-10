@@ -11,11 +11,14 @@ metadata:
     app.kubernetes.io/managed-by: kmake
     bythepowerof.github.io/kmake: kmake-test-app
     bythepowerof.github.io/scheduler: now
+    bythepowerof.github.io/workload: "yes"
+
 spec:
   job_template:
     spec:
       containers:
       - name: hello
         image: kmake:8
+        command: ['pymake']
         args: ['-z', '/usr/share/kmake/kmake.yaml']
   targets: [ 'task1']

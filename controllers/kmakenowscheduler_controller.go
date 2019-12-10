@@ -79,7 +79,8 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	ctx := context.Background()
 	log := r.Log.WithValues("kmakenowscheduler", req.NamespacedName)
 	requeue := ctrl.Result{Requeue: true}
-	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
+	// backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
+	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(10 * time.Second))}
 
 	// your logic here
 	instance := &bythepowerofv1.KmakeNowScheduler{}
@@ -154,7 +155,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		element.RunPhase = "Deleted"
 	}
 
-	// look at thr kmakerun items
+	// look at the kmakerun items
 	for _, element := range instance.Spec.Monitor {
 		runs := &bythepowerofv1.KmakeRunList{}
 		opts := []client.ListOption{
@@ -201,6 +202,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 						"bythepowerof.github.io/schedule-instance": instance.Name,
 						"bythepowerof.github.io/schedule-env":      currentenvmap.GetName(),
 						"bythepowerof.github.io/run":               xx.RunName,
+						"bythepowerof.github.io/workload":          "yes",
 					},
 					)
 
@@ -232,33 +234,87 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	for _, run := range runs.Items {
-
-		runType, err := json.Marshal(run.Spec.KmakeScheduleRunOperation)
+		var runType map[string]*json.RawMessage
+		data, err := json.Marshal(run.Spec.KmakeScheduleRunOperation)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		log.Info(fmt.Sprintf("found kmsr %b", runType))
-
-		xx := bythepowerofv1.KmakeRunManifest{
-			RunName:   run.GetKmakeRunName(),
-			RunPhase:  run.Status.Status,
-			KmakeName: run.GetKmakeName(),
-			RunType:   "Start",
+		err = json.Unmarshal(data, &runType)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
-		found := false
 
-		for j := 0; j < len(allRuns); j++ {
-			i := &allRuns[j]
-
-			if i.RunName == xx.RunName {
-				i.RunPhase = xx.RunPhase
-				i.KmakeName = xx.KmakeName
-				found = true
-				break
+		for k := range runType {
+			kmsr := bythepowerofv1.KmakeRunManifest{
+				RunName:         run.GetKmakeRunName(),
+				ScheduleRunName: run.GetName(),
+				RunPhase:        run.Status.Status,
+				KmakeName:       run.GetKmakeName(),
+				RunType:         k,
 			}
-		}
-		if !found {
-			allRuns = append(allRuns, xx)
+
+			found := false
+			for j := 0; j < len(allRuns); j++ {
+				i := &allRuns[j]
+
+				if i.RunName != "" && i.RunName == kmsr.RunName {
+					i.RunPhase = kmsr.RunPhase
+					i.KmakeName = kmsr.KmakeName
+					found = true
+					break
+				}
+
+				if i.ScheduleRunName == kmsr.ScheduleRunName {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				switch k {
+				case "start":
+					allRuns = append(allRuns, kmsr)
+				case "reset":
+					del := &bythepowerofv1.KmakeScheduleRun{}
+					kmsr.RunPhase = k
+
+					do := &client.DeleteAllOfOptions{}
+					do.ApplyOptions([]client.DeleteAllOfOption{
+						client.InNamespace(req.NamespacedName.Namespace),
+						client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
+					})
+
+					if run.Spec.Reset.Full == "" || run.Spec.Reset.Full == "no" {
+						do.ApplyOptions([]client.DeleteAllOfOption{
+							client.MatchingLabels{"bythepowerof.github.io/workload": "yes"},
+						})
+						allRuns = append(allRuns, kmsr)
+					} else {
+						allRuns = make([]bythepowerofv1.KmakeRunManifest, 0)
+						allRuns = append(allRuns, kmsr)
+					}
+					err := r.DeleteAllOf(ctx, del, do)
+					if err != nil {
+						if !errors.IsNotFound(err) {
+							return reconcile.Result{}, err
+						} else {
+							err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
+							if err != nil {
+								return reconcile.Result{}, err
+							}
+						}
+					} else {
+						err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
+						if err != nil {
+							return reconcile.Result{}, err
+						}
+					}
+				default:
+					kmsr.RunPhase = "Unsupported"
+					allRuns = append(allRuns, kmsr)
+				}
+			}
+			break // because we only expect one key
 		}
 	}
 
