@@ -1,0 +1,12 @@
+apiVersion: bythepowerof.github.com/v1
+kind: KmakeScheduleRun
+metadata:
+  generateName: kmakeschedulerun-sample-
+  labels:
+    bythepowerof.github.io/kmake: kmake-test-app
+    bythepowerof.github.io/schedule: kmakenowscheduler-sample
+    bythepowerof.github.io/schedule-env: kmakenowscheduler-sample-env-p4d2f
+    bythepowerof.github.io/run: kmakerun-sample-err-556rn
+spec: 
+  operation:
+    start: {}

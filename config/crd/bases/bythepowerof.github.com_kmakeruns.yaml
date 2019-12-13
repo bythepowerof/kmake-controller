@@ -6,11 +6,6 @@ metadata:
   creationTimestamp: null
   name: kmakeruns.bythepowerof.github.com
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.status
-    description: status of the run
-    name: Status
-    type: string
   group: bythepowerof.github.com
   names:
     kind: KmakeRun
@@ -18,8 +13,6 @@ spec:
     plural: kmakeruns
     singular: kmakerun
   scope: ""
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       description: KmakeRun is the Schema for the kmakeruns API
@@ -4169,28 +4162,13 @@ spec:
                   type: object
               type: object
             targets:
-              description: Kmake       string                 `json:"kmake"`
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
               items:
                 type: string
               type: array
           required:
           - job_template
-          type: object
-        status:
-          description: KmakeRunStatus defines the observed state of KmakeRun
-          properties:
-            kmake_resources:
-              additionalProperties:
-                type: string
-              description: ExicCode      int64             `json:"exit_code,omitempty"`
-              type: object
-            status:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file Targets       []string          `json:"targets,omitempty"`
-                StartTime     int64             `json:"start_time,omitempty"` TerminateTime
-                int64             `json:"terminate_time,omitempty"`'
-              type: string
           type: object
       type: object
   version: v1
