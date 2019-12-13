@@ -63,6 +63,9 @@ func (r *KmakeNowSchedulerReconciler) Event(instance *bythepowerofv1.KmakeNowSch
 		if err != nil {
 			return err
 		}
+		if instance.Annotations == nil {
+			instance.Annotations = make(map[string]string)
+		}
 		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
@@ -79,8 +82,8 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	ctx := context.Background()
 	log := r.Log.WithValues("kmakenowscheduler", req.NamespacedName)
 	requeue := ctrl.Result{Requeue: true}
-	// backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
-	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(10 * time.Second))}
+	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
+	// backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(10 * time.Second))}
 
 	// your logic here
 	instance := &bythepowerofv1.KmakeNowScheduler{}
@@ -150,9 +153,20 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// search for things label bythepowerof.github.io/scheduler
 
 	allRuns := append([]bythepowerofv1.KmakeRunManifest(nil), instance.Status.Runs...)
+	k := 0
 	for j := 0; j < len(allRuns); j++ {
 		element := &allRuns[j]
-		element.RunPhase = "Deleted"
+		if element.RunPhase != "Deleted" {
+			element.RunPhase = "Deleted"
+			allRuns[k] = *element
+			k++
+		} else {
+			err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, element.ScheduleRunName)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		allRuns = allRuns[:k]
 	}
 
 	// look at the kmakerun items
@@ -257,62 +271,57 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 			for j := 0; j < len(allRuns); j++ {
 				i := &allRuns[j]
 
-				if i.RunName != "" && i.RunName == kmsr.RunName {
+				if (i.RunName != "" && i.RunName == kmsr.RunName) || i.ScheduleRunName == kmsr.ScheduleRunName {
 					i.RunPhase = kmsr.RunPhase
 					i.KmakeName = kmsr.KmakeName
-					found = true
-					break
-				}
-
-				if i.ScheduleRunName == kmsr.ScheduleRunName {
 					found = true
 					break
 				}
 			}
 
 			if !found {
-				switch k {
-				case "start":
-					allRuns = append(allRuns, kmsr)
-				case "reset":
-					del := &bythepowerofv1.KmakeScheduleRun{}
-					kmsr.RunPhase = k
+				// switch k {
+				// case "start":
+				allRuns = append(allRuns, kmsr)
+				// case "reset":
+				// 	del := &bythepowerofv1.KmakeScheduleRun{}
+				// 	kmsr.RunPhase = k
 
-					do := &client.DeleteAllOfOptions{}
-					do.ApplyOptions([]client.DeleteAllOfOption{
-						client.InNamespace(req.NamespacedName.Namespace),
-						client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
-					})
+				// 	do := &client.DeleteAllOfOptions{}
+				// 	do.ApplyOptions([]client.DeleteAllOfOption{
+				// 		client.InNamespace(req.NamespacedName.Namespace),
+				// 		client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
+				// 	})
 
-					if run.Spec.Reset.Full == "" || run.Spec.Reset.Full == "no" {
-						do.ApplyOptions([]client.DeleteAllOfOption{
-							client.MatchingLabels{"bythepowerof.github.io/workload": "yes"},
-						})
-						allRuns = append(allRuns, kmsr)
-					} else {
-						allRuns = make([]bythepowerofv1.KmakeRunManifest, 0)
-						allRuns = append(allRuns, kmsr)
-					}
-					err := r.DeleteAllOf(ctx, del, do)
-					if err != nil {
-						if !errors.IsNotFound(err) {
-							return reconcile.Result{}, err
-						} else {
-							err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
-							if err != nil {
-								return reconcile.Result{}, err
-							}
-						}
-					} else {
-						err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
-						if err != nil {
-							return reconcile.Result{}, err
-						}
-					}
-				default:
-					kmsr.RunPhase = "Unsupported"
-					allRuns = append(allRuns, kmsr)
-				}
+				// 	if run.Spec.Reset.Full == "" || run.Spec.Reset.Full == "no" {
+				// 		do.ApplyOptions([]client.DeleteAllOfOption{
+				// 			client.MatchingLabels{"bythepowerof.github.io/workload": "yes"},
+				// 		})
+				// 		allRuns = append(allRuns, kmsr)
+				// 	} else {
+				// 		allRuns = make([]bythepowerofv1.KmakeRunManifest, 0)
+				// 		allRuns = append(allRuns, kmsr)
+				// 	}
+				// 	err := r.DeleteAllOf(ctx, del, do)
+				// 	if err != nil {
+				// 		if !errors.IsNotFound(err) {
+				// 			return reconcile.Result{}, err
+				// 		} else {
+				// 			err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
+				// 			if err != nil {
+				// 				return reconcile.Result{}, err
+				// 			}
+				// 		}
+				// 	} else {
+				// 		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
+				// 		if err != nil {
+				// 			return reconcile.Result{}, err
+				// 		}
+				// 	}
+				// default:
+				// 	kmsr.RunPhase = "Unsupported"
+				// 	allRuns = append(allRuns, kmsr)
+				// }
 			}
 			break // because we only expect one key
 		}

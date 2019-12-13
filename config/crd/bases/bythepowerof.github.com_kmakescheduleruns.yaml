@@ -68,6 +68,8 @@ spec:
                         modifying this file'
                       type: string
                   type: object
+                restart:
+                  type: object
                 start:
                   type: object
                 stop:

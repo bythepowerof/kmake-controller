@@ -32,12 +32,13 @@ type KmakeScheduleRunSpec struct {
 }
 
 type KmakeScheduleRunOperation struct {
-	Start  *KmakeScheduleRunStart `json:"start,omitempty"`
-	Stop   *KmakeScheduleRunStop  `json:"stop,omitempty"`
-	Delete *KmakeScheduleDelete   `json:"delete,omitempty"`
-	Create *KmakeScheduleCreate   `json:"create,omitempty"`
-	Reset  *KmakeScheduleReset    `json:"reset,omitempty"`
-	Force  *KmakeScheduleForce    `json:"force,omitempty"`
+	Start   *KmakeScheduleRunStart   `json:"start,omitempty"`
+	Restart *KmakeScheduleRunRestart `json:"restart,omitempty"`
+	Stop    *KmakeScheduleRunStop    `json:"stop,omitempty"`
+	Delete  *KmakeScheduleDelete     `json:"delete,omitempty"`
+	Create  *KmakeScheduleCreate     `json:"create,omitempty"`
+	Reset   *KmakeScheduleReset      `json:"reset,omitempty"`
+	Force   *KmakeScheduleForce      `json:"force,omitempty"`
 }
 
 type KmakeScheduleRunStart struct {
@@ -46,7 +47,12 @@ type KmakeScheduleRunStart struct {
 	// 	Run      string `json:"run,omitempty"`
 	// 	Schedule string `json:"schedule,omitempty"`
 }
-
+type KmakeScheduleRunRestart struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	// 	Run      string `json:"run,omitempty"`
+	// 	Schedule string `json:"schedule,omitempty"`
+}
 type KmakeScheduleRunStop struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
