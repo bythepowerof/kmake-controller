@@ -152,21 +152,21 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// search for things label bythepowerof.github.io/scheduler
 
-	allRuns := append([]bythepowerofv1.KmakeRunManifest(nil), instance.Status.Runs...)
-	k := 0
-	for j := 0; j < len(allRuns); j++ {
-		element := &allRuns[j]
-		if element.RunPhase != "Deleted" {
-			element.RunPhase = "Deleted"
-			allRuns[k] = *element
-			k++
-		} else {
-			err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, element.ScheduleRunName)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-		allRuns = allRuns[:k]
+	// look at the scheduleruns just for this instance...
+	runs := &bythepowerofv1.KmakeScheduleRunList{}
+	opts := []client.ListOption{
+		client.InNamespace(req.NamespacedName.Namespace),
+		client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
+	}
+	err = r.List(ctx, runs, opts...)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	allRuns := make([]string, 0)
+
+	for _, run := range runs.Items {
+		allRuns = append(allRuns, run.GetKmakeRunName())
 	}
 
 	// look at the kmakerun items
@@ -184,20 +184,11 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 		for _, run := range runs.Items {
 			if val, ok := run.GetObjectMeta().GetLabels()["bythepowerof.github.io/kmake"]; ok {
-				xx := bythepowerofv1.KmakeRunManifest{
-					RunName:   run.GetName(),
-					RunPhase:  "Provisioning",
-					KmakeName: val,
-					RunType:   "Start",
-				}
 
 				found := false
 
-				for j := 0; j < len(allRuns); j++ {
-					i := &allRuns[j]
-					if i.RunName == xx.RunName {
-						// i.RunPhase = xx.RunPhase
-						// i.KmakeName = xx.KmakeName
+				for _, i := range allRuns {
+					if i == run.GetName() {
 						found = true
 						break
 					}
@@ -212,13 +203,13 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 						},
 					}
 					kmsr.SetLabels(map[string]string{
-						"bythepowerof.github.io/kmake":             xx.KmakeName,
+						"bythepowerof.github.io/kmake":             val,
 						"bythepowerof.github.io/schedule-instance": instance.Name,
 						"bythepowerof.github.io/schedule-env":      currentenvmap.GetName(),
-						"bythepowerof.github.io/run":               xx.RunName,
+						"bythepowerof.github.io/run":               run.GetName(),
 						"bythepowerof.github.io/workload":          "yes",
-					},
-					)
+						"bythepowerof.github.io/status":            "Provision",
+					})
 
 					err = r.Create(ctx, kmsr)
 					if err != nil {
@@ -229,110 +220,12 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 						return reconcile.Result{}, err
 					}
 					// return requeue, nil
-					allRuns = append(allRuns, xx)
+					allRuns = append(allRuns, run.GetName())
 				}
 			} else {
 				log.Info(fmt.Sprintf("run %v not connected to kmake", instance.GetName()))
 			}
 		}
-	}
-
-	// look at the scheduleruns just for this instance...
-	runs := &bythepowerofv1.KmakeScheduleRunList{}
-	opts := []client.ListOption{
-		client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
-	}
-	err = r.List(ctx, runs, opts...)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	for _, run := range runs.Items {
-		var runType map[string]*json.RawMessage
-		data, err := json.Marshal(run.Spec.KmakeScheduleRunOperation)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		err = json.Unmarshal(data, &runType)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		for k := range runType {
-			kmsr := bythepowerofv1.KmakeRunManifest{
-				RunName:         run.GetKmakeRunName(),
-				ScheduleRunName: run.GetName(),
-				RunPhase:        run.Status.Status,
-				KmakeName:       run.GetKmakeName(),
-				RunType:         k,
-			}
-
-			found := false
-			for j := 0; j < len(allRuns); j++ {
-				i := &allRuns[j]
-
-				if (i.RunName != "" && i.RunName == kmsr.RunName) || i.ScheduleRunName == kmsr.ScheduleRunName {
-					i.RunPhase = kmsr.RunPhase
-					i.KmakeName = kmsr.KmakeName
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				// switch k {
-				// case "start":
-				allRuns = append(allRuns, kmsr)
-				// case "reset":
-				// 	del := &bythepowerofv1.KmakeScheduleRun{}
-				// 	kmsr.RunPhase = k
-
-				// 	do := &client.DeleteAllOfOptions{}
-				// 	do.ApplyOptions([]client.DeleteAllOfOption{
-				// 		client.InNamespace(req.NamespacedName.Namespace),
-				// 		client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
-				// 	})
-
-				// 	if run.Spec.Reset.Full == "" || run.Spec.Reset.Full == "no" {
-				// 		do.ApplyOptions([]client.DeleteAllOfOption{
-				// 			client.MatchingLabels{"bythepowerof.github.io/workload": "yes"},
-				// 		})
-				// 		allRuns = append(allRuns, kmsr)
-				// 	} else {
-				// 		allRuns = make([]bythepowerofv1.KmakeRunManifest, 0)
-				// 		allRuns = append(allRuns, kmsr)
-				// 	}
-				// 	err := r.DeleteAllOf(ctx, del, do)
-				// 	if err != nil {
-				// 		if !errors.IsNotFound(err) {
-				// 			return reconcile.Result{}, err
-				// 		} else {
-				// 			err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
-				// 			if err != nil {
-				// 				return reconcile.Result{}, err
-				// 			}
-				// 		}
-				// 	} else {
-				// 		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
-				// 		if err != nil {
-				// 			return reconcile.Result{}, err
-				// 		}
-				// 	}
-				// default:
-				// 	kmsr.RunPhase = "Unsupported"
-				// 	allRuns = append(allRuns, kmsr)
-				// }
-			}
-			break // because we only expect one key
-		}
-	}
-
-	if !(equality.Semantic.DeepEqual(allRuns, instance.Status.Runs)) {
-		log.Info(fmt.Sprintf("update runs %v", instance.Status.NameConcat(bythepowerofv1.Runs)))
-
-		instance.Status.Runs = allRuns
-		instance.Status.Status = ""
-		err = r.Event(instance, bythepowerofv1.Update, bythepowerofv1.Runs, instance.GetName())
 	}
 
 	return backoff5, nil

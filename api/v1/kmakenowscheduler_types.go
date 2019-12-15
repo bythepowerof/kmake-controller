@@ -31,21 +31,12 @@ type KmakeNowSchedulerSpec struct {
 	Monitor   []string          `json:"monitor"`
 }
 
-type KmakeRunManifest struct {
-	KmakeName       string `json:"kmake_name,omitempty"`
-	ScheduleRunName string `json:"schedule_run_name,omitempty"`
-	RunName         string `json:"run_name,omitempty"`
-	RunPhase        string `json:"run_phase,omitempty"`
-	RunType         string `json:"run_type,omitempty"`
-}
-
 // KmakeNowSchedulerStatus defines the observed state of KmakeNowScheduler
 type KmakeNowSchedulerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Runs      []KmakeRunManifest `json:"run_manifest,omitempty"`
-	Status    string             `json:"status,omitempty"`
-	Resources map[string]string  `json:"kmake_resources,omitempty"`
+	Status    string            `json:"status,omitempty"`
+	Resources map[string]string `json:"kmake_resources,omitempty"`
 }
 
 func (status *KmakeNowSchedulerStatus) UpdateSubResource(subresource SubResource, name string) {

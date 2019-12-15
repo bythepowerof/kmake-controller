@@ -27,8 +27,32 @@ import (
 type KmakeRunSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Targets     []string               `json:"targets,omitempty"`
-	JobTemplate corev1.PodTemplateSpec `json:"job_template"`
+	KmakeRunOperation `json:"operation"`
+}
+
+type KmakeRunOperation struct {
+	Job      *KmakeRunJob      `json:"job,omitempty"`
+	Dummy    *KmakeRunDummy    `json:"dummy,omitempty"`
+	FileWait *KmakeRunFileWait `json:"file_wait,omitempty"`
+}
+
+type KmakeRunJob struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	Targets  []string               `json:"targets,omitempty"`
+	Template corev1.PodTemplateSpec `json:"template"`
+}
+
+type KmakeRunDummy struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+}
+
+type KmakeRunFileWait struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	// Run string `json:"run,omitempty"`
+	Files []string `json:"files,omitempty"`
 }
 
 // KmakeRunStatus defines the observed state of KmakeRun

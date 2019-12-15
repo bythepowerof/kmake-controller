@@ -1,13 +1,12 @@
 apiVersion: bythepowerof.github.com/v1
 kind: KmakeScheduleRun
 metadata:
-  generateName: kmakenowscheduler-stop-kmsr-
+  generateName: kmakenowscheduler-reset-kmsr-
   generation: 1
   labels:
     bythepowerof.github.io/schedule-instance: kmakenowscheduler-sample
-    # bythepowerof.github.io/kmake: kmake-test-app
     bythepowerof.github.io/workload: "no"
-    bythepowerof.github.io/run: kmakerun-sample
+
 spec:
   operation:
-    stop: {}
+    reset: {}

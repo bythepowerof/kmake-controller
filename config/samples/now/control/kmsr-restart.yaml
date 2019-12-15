@@ -6,7 +6,7 @@ metadata:
   labels:
     bythepowerof.github.io/schedule-instance: kmakenowscheduler-sample
     bythepowerof.github.io/workload: "no"
-    bythepowerof.github.io/run: kmakerun-sample-ptwcz
 spec:
   operation:
     restart: 
+      run: kmakerun-sample
