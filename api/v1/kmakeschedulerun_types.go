@@ -44,19 +44,19 @@ type KmakeScheduleRunOperation struct {
 type KmakeScheduleRunStart struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// 	Run      string `json:"run,omitempty"`
-	// 	Schedule string `json:"schedule,omitempty"`
+	// Run      string `json:"run,omitempty"`
 }
+
 type KmakeScheduleRunRestart struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// 	Run      string `json:"run,omitempty"`
-	// 	Schedule string `json:"schedule,omitempty"`
+	Run string `json:"run,omitempty"`
 }
+
 type KmakeScheduleRunStop struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Run string `json:"run,omitempty"`
+	Run string `json:"run,omitempty"`
 }
 
 type KmakeScheduleDelete struct {
@@ -128,14 +128,20 @@ func (kmsr *KmakeScheduleRun) IsBeingDeleted() bool {
 }
 
 func (kmsr *KmakeScheduleRun) HasEnded() bool {
-	return strings.Contains(kmsr.Status.Status, "Success") ||
-		strings.Contains(kmsr.Status.Status, "Error") ||
-		strings.Contains(kmsr.Status.Status, "Abort")
+	if val, ok := kmsr.Labels["bythepowerof.github.io/status"]; ok {
+		return strings.Contains(val, "Success") ||
+			strings.Contains(val, "Error") ||
+			strings.Contains(val, "Abort")
+	}
+	return false
 }
 
 func (kmsr *KmakeScheduleRun) IsActive() bool {
-	return strings.Contains(kmsr.Status.Status, "Provision") ||
-		strings.Contains(kmsr.Status.Status, "Active")
+	if val, ok := kmsr.Labels["bythepowerof.github.io/status"]; ok {
+		return strings.Contains(val, "Provision") ||
+			strings.Contains(val, "Active")
+	}
+	return true
 }
 
 func (kmsr *KmakeScheduleRun) IsNew() bool {

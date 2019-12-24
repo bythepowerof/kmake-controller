@@ -54,25 +54,10 @@ spec:
               additionalProperties:
                 type: string
               type: object
-            run_manifest:
+            status:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
                 this file'
-              items:
-                properties:
-                  kmake_name:
-                    type: string
-                  run_name:
-                    type: string
-                  run_phase:
-                    type: string
-                  run_type:
-                    type: string
-                  schedule_run_name:
-                    type: string
-                type: object
-              type: array
-            status:
               type: string
           type: object
       type: object

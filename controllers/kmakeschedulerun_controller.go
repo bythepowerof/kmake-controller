@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	// "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -66,6 +67,7 @@ func (r *KmakeScheduleRunReconciler) Event(instance *bythepowerofv1.KmakeSchedul
 		if instance.Annotations == nil {
 			instance.Annotations = make(map[string]string)
 		}
+		instance.Labels["bythepowerof.github.io/status"] = phase.String()
 		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
@@ -93,9 +95,6 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	instance := &bythepowerofv1.KmakeScheduleRun{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 
-	log.Info(fmt.Sprintf("Starting reconcile loop for %v", req.NamespacedName))
-	defer log.Info(fmt.Sprintf("Finish reconcile loop for %v", req.NamespacedName))
-
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -112,11 +111,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, nil
 	}
 
-	// add in kmake owner
-
-	// add in kmake run owner
-
-	// add in kmake schedule owner
+	if !instance.IsActive() {
+		return ctrl.Result{}, nil
+	}
 
 	var runType map[string]*json.RawMessage
 	data, err := json.Marshal(instance.Spec.KmakeScheduleRunOperation)
@@ -193,185 +190,266 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				}
 				return ctrl.Result{}, err
 			}
-			// build the pod
-			requiredjob := &v1.Job{
-				ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
-			}
-			requiredjob.Spec.Template = run.Spec.JobTemplate
 
-			// add in the targets as args
-			if requiredjob.Spec.Template.Spec.Containers[0].Args == nil {
-				requiredjob.Spec.Template.Spec.Containers[0].Args = run.Spec.Targets
-			} else {
-				requiredjob.Spec.Template.Spec.Containers[0].Args = append(requiredjob.Spec.Template.Spec.Containers[0].Args, run.Spec.Targets...)
-			}
-
-			// add in the env mount and env
-			if requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts == nil {
-				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
-				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
-					MountPath: "/usr/share/env",
-					Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
+			// Job
+			if run.Spec.KmakeRunOperation.Job != nil {
+				// build the pod
+				requiredjob := &v1.Job{
+					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
 				}
-			} else {
-				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
+				requiredjob.Spec.Template = run.Spec.KmakeRunOperation.Job.Template
+
+				// add in the targets as args
+				if requiredjob.Spec.Template.Spec.Containers[0].Args == nil {
+					requiredjob.Spec.Template.Spec.Containers[0].Args = run.Spec.KmakeRunOperation.Job.Targets
+				} else {
+					requiredjob.Spec.Template.Spec.Containers[0].Args = append(requiredjob.Spec.Template.Spec.Containers[0].Args, run.Spec.KmakeRunOperation.Job.Targets...)
+				}
+
+				// add in the env mount and env
+				if requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts == nil {
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
 						MountPath: "/usr/share/env",
 						Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
-					})
-			}
-
-			if requiredjob.Spec.Template.Spec.Volumes == nil {
-				requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-				requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
-					Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
-						},
-					},
+					}
+				} else {
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+						requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+						corev1.VolumeMount{
+							MountPath: "/usr/share/env",
+							Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
+						})
 				}
-			} else {
-				requiredjob.Spec.Template.Spec.Volumes = append(
-					requiredjob.Spec.Template.Spec.Volumes,
-					corev1.Volume{
+
+				if requiredjob.Spec.Template.Spec.Volumes == nil {
+					requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
+					requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
 						Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
 							},
 						},
+					}
+				} else {
+					requiredjob.Spec.Template.Spec.Volumes = append(
+						requiredjob.Spec.Template.Spec.Volumes,
+						corev1.Volume{
+							Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+								},
+							},
+						})
+				}
+
+				requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
+					requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
+					corev1.EnvFromSource{
+						ConfigMapRef: &corev1.ConfigMapEnvSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+						},
 					})
-			}
 
-			requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
-				requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
-				corev1.EnvFromSource{
-					ConfigMapRef: &corev1.ConfigMapEnvSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
-					},
-				})
+				// add in the sched env mount and env
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/schedule",
+						Name:      kmakescheduleEnv,
+					})
 
-			// add in the sched env mount and env
-			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-				corev1.VolumeMount{
-					MountPath: "/usr/share/schedule",
-					Name:      kmakescheduleEnv,
-				})
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: kmakescheduleEnv,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: kmakescheduleEnv},
+							},
+						},
+					})
 
-			requiredjob.Spec.Template.Spec.Volumes = append(
-				requiredjob.Spec.Template.Spec.Volumes,
-				corev1.Volume{
-					Name: kmakescheduleEnv,
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
+				requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
+					requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
+					corev1.EnvFromSource{
+						ConfigMapRef: &corev1.ConfigMapEnvSource{
 							LocalObjectReference: corev1.LocalObjectReference{Name: kmakescheduleEnv},
 						},
-					},
-				})
+					})
 
-			requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
-				requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
-				corev1.EnvFromSource{
-					ConfigMapRef: &corev1.ConfigMapEnvSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: kmakescheduleEnv},
-					},
-				})
+				// add in the pvc and mount
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/pvc",
+						Name:      kmake.GetSubReference(bythepowerofv1.PVC),
+					})
 
-			// add in the pvc and mount
-			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-				corev1.VolumeMount{
-					MountPath: "/usr/share/pvc",
-					Name:      kmake.GetSubReference(bythepowerofv1.PVC),
-				})
-
-			requiredjob.Spec.Template.Spec.Volumes = append(
-				requiredjob.Spec.Template.Spec.Volumes,
-				corev1.Volume{
-					Name: kmake.GetSubReference(bythepowerofv1.PVC),
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: kmake.GetSubReference(bythepowerofv1.PVC),
-							ReadOnly:  false,
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: kmake.GetSubReference(bythepowerofv1.PVC),
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: kmake.GetSubReference(bythepowerofv1.PVC),
+								ReadOnly:  false,
+							},
 						},
-					},
-				})
+					})
 
-			// add in the kmake mount
-			requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-				corev1.VolumeMount{
-					MountPath: "/usr/share/kmake",
-					Name:      kmake.GetSubReference(bythepowerofv1.KmakeMap),
-				})
+				// add in the kmake mount
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/kmake",
+						Name:      kmake.GetSubReference(bythepowerofv1.KmakeMap),
+					})
 
-			requiredjob.Spec.Template.Spec.Volumes = append(
-				requiredjob.Spec.Template.Spec.Volumes,
-				corev1.Volume{
-					Name: kmake.GetSubReference(bythepowerofv1.KmakeMap),
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.KmakeMap)},
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: kmake.GetSubReference(bythepowerofv1.KmakeMap),
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.KmakeMap)},
+							},
 						},
-					},
-				})
+					})
 
-			// fix the restart policy
-			if requiredjob.Spec.Template.Spec.RestartPolicy == "" {
-				requiredjob.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+				// fix the restart policy
+				if requiredjob.Spec.Template.Spec.RestartPolicy == "" {
+					requiredjob.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+				}
+
+				// create it
+				err = r.Create(ctx, requiredjob)
+				if err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+				r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
+				return backoff5, nil
 			}
-
-			// create it
-			err = r.Create(ctx, requiredjob)
-			if err != nil {
-				r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
+			if run.Spec.KmakeRunOperation.Dummy != nil {
+				err := r.Event(instance, bythepowerofv1.Success, bythepowerofv1.Dummy, instance.GetName())
 				return reconcile.Result{}, err
 			}
-			r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
-			return ctrl.Result{}, nil
+			if run.Spec.KmakeRunOperation.FileWait != nil {
+				err := r.Event(instance, bythepowerofv1.Success, bythepowerofv1.FileWait, instance.GetName())
+				return reconcile.Result{}, err
+			}
+
 		case "reset":
-			del := &bythepowerofv1.KmakeScheduleRun{}
+			if instance.IsNew() {
 
-			do := &client.DeleteAllOfOptions{}
-			if scheduler, ok := instance.GetLabels()["bythepowerof.github.io/schedule-instance"]; ok {
-				do.ApplyOptions([]client.DeleteAllOfOption{
-					client.InNamespace(req.NamespacedName.Namespace),
-					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": scheduler},
-				})
-			} else {
-				err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No scheduler set")
-				return reconcile.Result{}, fmt.Errorf("No scheduler set")
-			}
+				del := &bythepowerofv1.KmakeScheduleRun{}
 
-			if instance.Spec.Reset.Full == "" || instance.Spec.Reset.Full == "no" {
-				do.ApplyOptions([]client.DeleteAllOfOption{
-					client.MatchingLabels{"bythepowerof.github.io/workload": "yes"},
-				})
-			}
-			err := r.DeleteAllOf(ctx, del, do)
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					return reconcile.Result{}, err
+				do := &client.DeleteAllOfOptions{}
+				labels := client.MatchingLabels{}
+
+				if scheduler, ok := instance.GetLabels()["bythepowerof.github.io/schedule-instance"]; ok {
+					do.ApplyOptions([]client.DeleteAllOfOption{
+						client.InNamespace(req.NamespacedName.Namespace)})
+					labels["bythepowerof.github.io/schedule-instance"] = scheduler
 				} else {
-					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
-					if err != nil {
+					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No scheduler set")
+					return reconcile.Result{}, fmt.Errorf("No scheduler set")
+				}
+
+				if instance.Spec.Reset.Full == "" || instance.Spec.Reset.Full == "no" {
+					labels["bythepowerof.github.io/workload"] = "yes"
+				}
+				do.ApplyOptions([]client.DeleteAllOfOption{labels})
+
+				err := r.DeleteAllOf(ctx, del, do)
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						return reconcile.Result{}, err
+					} else {
+						err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
 						return reconcile.Result{}, err
 					}
-				}
-			} else {
-				err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
-				if err != nil {
+				} else {
+					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
 					return reconcile.Result{}, err
 				}
 			}
+		case "stop":
+			if instance.IsNew() {
+				var si, kmr string
+				var ok bool
+				if si, ok = instance.Labels["bythepowerof.github.io/schedule-instance"]; !ok {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
+					return reconcile.Result{}, err
+				}
+				if kmr, ok = instance.Labels["bythepowerof.github.io/run"]; !ok {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No kmakerun set")
+					return reconcile.Result{}, err
+				}
+
+				do := &client.DeleteAllOfOptions{}
+				del := &bythepowerofv1.KmakeScheduleRun{}
+				do.ApplyOptions([]client.DeleteAllOfOption{
+					client.InNamespace(req.NamespacedName.Namespace),
+					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": si,
+						// "bythepowerof.github.io/status": "Active",
+						"bythepowerof.github.io/run":      kmr,
+						"bythepowerof.github.io/workload": "yes"},
+				})
+
+				err = r.DeleteAllOf(ctx, del, do)
+				if err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, instance.GetName())
+					return reconcile.Result{}, err
+				}
+				r.Event(instance, bythepowerofv1.Stop, bythepowerofv1.Runs, instance.GetName())
+				return reconcile.Result{}, nil
+			}
+		case "restart":
+			if instance.IsNew() {
+				var si string
+				var ok bool
+				if si, ok = instance.Labels["bythepowerof.github.io/schedule-instance"]; !ok {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
+					return reconcile.Result{}, err
+				}
+				if instance.Spec.Restart.Run == "" {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No kmakerun set")
+					return reconcile.Result{}, err
+				}
+
+				do := &client.DeleteAllOfOptions{}
+				del := &bythepowerofv1.KmakeScheduleRun{}
+
+				// x, err := labels.Parse("x in (foo,,baz),y,z notin ()")
+
+				do.ApplyOptions([]client.DeleteAllOfOption{
+					client.InNamespace(req.NamespacedName.Namespace),
+					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": si,
+						// "bythepowerof.github.io/status": "Stop",
+						"bythepowerof.github.io/run":      instance.Spec.Restart.Run,
+						"bythepowerof.github.io/workload": "no"},
+					// client.MatchingLabelsSelector{Selector: x},
+				})
+
+				err = r.DeleteAllOf(ctx, del, do)
+				if err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, instance.GetName())
+					return reconcile.Result{}, err
+				}
+				r.Event(instance, bythepowerofv1.Restart, bythepowerofv1.Runs, instance.GetName())
+				return reconcile.Result{}, nil
+			}
+		default:
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "Unknown operation")
+			return reconcile.Result{}, nil
 		}
-		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Schedule, k)
 		break // because we only expect one key
 	}
-	return ctrl.Result{}, nil
+	return backoff5, nil
 }
 
 func (r *KmakeScheduleRunReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -5,17 +5,14 @@ go:
 
 cache:
   directories:
-  # this is installed with sudo :(
-  # - /usr/local/kubebuilder
   - $HOME/tmp/kubebuilder
   - $HOME/.cache/go-build
   - $HOME/gopath/pkg/mod
 
 before_install:
-- export GO111MODULE=on
-- export PATH=$PATH:/usr/local/kubebuilder/bin
-- go install sigs.k8s.io/kustomize/kustomize/v3
+- GO111MODULE=on go get sigs.k8s.io/kustomize/kustomize/v3@v3.3.0
 - $TRAVIS_BUILD_DIR/install-kb.sh
+- export PATH=$PATH:/usr/local/kubebuilder/bin
 
 script:
 - go mod download

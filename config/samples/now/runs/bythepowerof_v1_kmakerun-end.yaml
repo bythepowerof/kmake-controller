@@ -13,11 +13,13 @@ metadata:
     bythepowerof.github.io/scheduler: now
     bythepowerof.github.io/workload: "yes"
 spec:
-  job_template:
-    spec:
-      containers:
-      - name: hello
-        image: jeremymarshall/make-test:1
-        command: ['make']
-        args: ['-f', '/usr/share/kmake/kmake.mk']
-  targets: [ ]
+  operation:
+    job:
+      template:
+        spec:
+          containers:
+            - name: hello
+              image: jeremymarshall/make-test:1
+              command: ['make']
+              args: ['-f', '/usr/share/kmake/kmake.mk']
+      targets: [ ]
