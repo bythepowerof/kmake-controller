@@ -21,17 +21,11 @@ import (
 )
 
 func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string, kind string) metav1.ObjectMeta {
+
+	// isController := true
 	return metav1.ObjectMeta{
 		Namespace:    namespacedName.Namespace,
 		GenerateName: namespacedName.Name + "-" + suffix + "-",
 		Labels:       owner.GetLabels(),
-		OwnerReferences: []metav1.OwnerReference{
-			metav1.OwnerReference{
-				APIVersion: "bythepowerof.github.com/v1",
-				Kind:       kind,
-				Name:       owner.GetName(),
-				UID:        owner.GetUID(),
-			},
-		},
 	}
 }

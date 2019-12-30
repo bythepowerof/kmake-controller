@@ -59,7 +59,18 @@ type KmakeRunFileWait struct {
 type KmakeRunStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Status string `json:"status,omitempty"`
+	Status    string            `json:"status,omitempty"`
+	Resources map[string]string `json:"resources,omitempty"`
+}
+
+func (status *KmakeRunStatus) UpdateSubResource(subresource SubResource, name string) {
+	if name == "" {
+		return
+	}
+	if status.Resources == nil {
+		status.Resources = map[string]string{}
+	}
+	status.Resources[subresource.String()] = name
 }
 
 // +kubebuilder:object:root=true
@@ -69,8 +80,21 @@ type KmakeRun struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec KmakeRunSpec `json:"spec,omitempty"`
-	// Status KmakeRunStatus `json:"status,omitempty"`
+	Spec   KmakeRunSpec   `json:"spec,omitempty"`
+	Status KmakeRunStatus `json:"status,omitempty"`
+}
+
+func (kmake *KmakeRun) IsBeingDeleted() bool {
+	return !kmake.ObjectMeta.DeletionTimestamp.IsZero()
+}
+
+func (kmsr *KmakeRun) GetKmakeName() string {
+	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/kmake"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
 }
 
 // +kubebuilder:object:root=true

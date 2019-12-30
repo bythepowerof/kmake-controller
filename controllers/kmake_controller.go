@@ -24,23 +24,17 @@ import (
 
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	// "k8s.io/client-go/tools/record"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// ctrl "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/client"
-	corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/kubernetes/pkg/api"
-	// "k8s.io/apimachinery/pkg/types"
-	// "k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/api/equality"
-
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // KmakeReconciler reconciles a Kmake object
@@ -48,6 +42,7 @@ type KmakeReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
 }
 
 func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
@@ -123,9 +118,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	currentpvc := &corev1.PersistentVolumeClaim{}
 	requiredpvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc", "Kmake"),
-
-		Spec: instance.Spec.PersistentVolumeClaimTemplate,
+		Spec:       instance.Spec.PersistentVolumeClaimTemplate,
 	}
+
+	controllerutil.SetControllerReference(instance, requiredpvc, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
 
@@ -186,9 +182,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	currentenvmap := &corev1.ConfigMap{}
 	requiredenvmap := &corev1.ConfigMap{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env", "Kmake"),
-
-		Data: instance.Spec.Variables,
+		Data:       instance.Spec.Variables,
 	}
+
+	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
@@ -237,6 +234,8 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			"kmake.mk": m},
 	}
 
+	controllerutil.SetControllerReference(instance, requiredkmakemap, r.Scheme)
+
 	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
 
 	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.KmakeMap), currentkmakemap)
@@ -275,6 +274,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.Kmake{}).
 		Complete(r)

@@ -25,9 +25,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -38,6 +40,7 @@ type KmakeNowSchedulerReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
 }
 
 func (r *KmakeNowSchedulerReconciler) Event(instance *bythepowerofv1.KmakeNowScheduler, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
@@ -76,8 +79,6 @@ func (r *KmakeNowSchedulerReconciler) Event(instance *bythepowerofv1.KmakeNowSch
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakenowschedulers/status,verbs=get;update;patch
 
 func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("kmakenowscheduler", req.NamespacedName)
 
 	ctx := context.Background()
 	log := r.Log.WithValues("kmakenowscheduler", req.NamespacedName)
@@ -114,7 +115,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 		Data: instance.Spec.Variables,
 	}
-
+	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
 	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
@@ -202,6 +203,8 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 							},
 						},
 					}
+					controllerutil.SetControllerReference(instance, kmsr, r.Scheme)
+
 					kmsr.SetLabels(map[string]string{
 						"bythepowerof.github.io/kmake":             val,
 						"bythepowerof.github.io/schedule-instance": instance.Name,

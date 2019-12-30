@@ -189,7 +189,7 @@ spec:
         status:
           description: KmakeStatus defines the observed state of Kmake
           properties:
-            kmake_resources:
+            resources:
               additionalProperties:
                 type: string
               type: object

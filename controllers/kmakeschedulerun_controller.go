@@ -27,10 +27,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	// "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -39,6 +41,7 @@ type KmakeScheduleRunReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
 }
 
 func (r *KmakeScheduleRunReconciler) Event(instance *bythepowerofv1.KmakeScheduleRun, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
@@ -184,11 +187,18 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			if err != nil {
 				if errors.IsNotFound(err) {
 					log.Info(fmt.Sprintf("Not found kmake %v", kmakename))
-					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, kmakename)
-					// don't requeue
-					return ctrl.Result{}, nil
+					r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.KMAKE, kmakename)
+					// wait for kmake
+					return backoff5, nil
 				}
 				return ctrl.Result{}, err
+			}
+			pvcName := kmake.GetSubReference(bythepowerofv1.PVC)
+			if pvcName == "" {
+				log.Info(fmt.Sprintf("Not found kmake PVC %v", kmakename))
+				r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, kmakename)
+				// wait for kmake
+				return backoff5, nil
 			}
 
 			// Job
@@ -197,6 +207,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				requiredjob := &v1.Job{
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
 				}
+
+				controllerutil.SetControllerReference(instance, requiredjob, r.Scheme)
+
 				requiredjob.Spec.Template = run.Spec.KmakeRunOperation.Job.Template
 
 				// add in the targets as args
@@ -285,7 +298,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
 					corev1.VolumeMount{
 						MountPath: "/usr/share/pvc",
-						Name:      kmake.GetSubReference(bythepowerofv1.PVC),
+						Name:      pvcName,
 					})
 
 				requiredjob.Spec.Template.Spec.Volumes = append(
