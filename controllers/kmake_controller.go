@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -73,14 +74,6 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 	}
 	return nil
 }
-
-// func (r *KmakeReconciler) AppendRun(kmake *bythepowerofv1.Kmake, run *bythepowerofv1.KmakeRun) {
-// 	kmake.Status.Runs = append(kmake.Status.Runs, &bythepowerofv1.KmakeRuns{
-// 		RunName:  run.GetName(),
-// 		RunPhase: bythepowerofv1.Wait.String(),
-// 	})
-// 	r.Status().Update(context.Background(), kmake)
-// }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes/status,verbs=get;update;patch
@@ -275,7 +268,29 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
+	runOwnerKey := ".metadata.controller"
+	apiGVStr := bythepowerofv1.GroupVersion.String()
+
+	if err := mgr.GetFieldIndexer().IndexField(&bythepowerofv1.KmakeRun{}, runOwnerKey, func(rawObj runtime.Object) []string {
+		// grab the run object, extract the owner...
+		run := rawObj.(*bythepowerofv1.KmakeRun)
+		owner := metav1.GetControllerOf(run)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Kmake...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Kmake" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.Kmake{}).
+		Owns(&bythepowerofv1.KmakeRun{}).
 		Complete(r)
 }

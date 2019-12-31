@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	// "k8s.io/apimachinery/pkg/labels"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -164,7 +165,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				} else {
 					if currentjob.Status.Active > 0 {
 						r.Event(instance, bythepowerofv1.Active, bythepowerofv1.Job, currentjob.GetName())
-						return backoff5, nil
+						return reconcile.Result{}, nil
 					}
 					if currentjob.Status.Succeeded > 0 {
 						r.Event(instance, bythepowerofv1.Success, bythepowerofv1.Job, currentjob.GetName())
@@ -174,7 +175,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 						r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, currentjob.GetName())
 						return ctrl.Result{}, nil
 					}
-					return backoff5, nil
+					return reconcile.Result{}, nil
 				}
 			}
 
@@ -344,7 +345,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					return reconcile.Result{}, err
 				}
 				r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
-				return backoff5, nil
+				return reconcile.Result{}, nil
 			}
 			if run.Spec.KmakeRunOperation.Dummy != nil {
 				err := r.Event(instance, bythepowerofv1.Success, bythepowerofv1.Dummy, instance.GetName())
@@ -462,11 +463,35 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		}
 		break // because we only expect one key
 	}
-	return backoff5, nil
+
+	return reconcile.Result{}, nil
 }
 
 func (r *KmakeScheduleRunReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	jobOwnerKey := ".metadata.controller"
+	apiGVStr := bythepowerofv1.GroupVersion.String()
+
+	if err := mgr.GetFieldIndexer().IndexField(&v1.Job{}, jobOwnerKey, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		job := rawObj.(*v1.Job)
+		owner := metav1.GetControllerOf(job)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Run...
+		if owner.APIVersion != apiGVStr || owner.Kind != "KmakeScheduleRun" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.KmakeScheduleRun{}).
+		Owns(&v1.Job{}).
 		Complete(r)
 }
