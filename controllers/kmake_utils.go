@@ -16,8 +16,13 @@ limitations under the License.
 package controllers
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string, kind string) metav1.ObjectMeta {
@@ -28,4 +33,68 @@ func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, 
 		GenerateName: namespacedName.Name + "-" + suffix + "-",
 		Labels:       owner.GetLabels(),
 	}
+}
+
+// SetOwnerReference sets owner as a OwnerReference on owned.
+// This is used for garbage collection of the owned object and for
+// reconciling the owner object on changes to owned (with a Watch + EnqueueRequestForOwner).
+func SetOwnerReference(owner, object metav1.Object, scheme *runtime.Scheme) error {
+	ro, ok := owner.(runtime.Object)
+	if !ok {
+		return fmt.Errorf("%T is not a runtime.Object, cannot call SetControllerReference", owner)
+	}
+
+	gvk, err := apiutil.GVKForObject(ro, scheme)
+	if err != nil {
+		return err
+	}
+
+	// Create a new ref
+	ref := *NewOwnerRef(owner, schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+
+	existingRefs := object.GetOwnerReferences()
+	fi := -1
+	for i, r := range existingRefs {
+		if referSameObject(ref, r) {
+			fi = i
+		}
+	}
+	if fi == -1 {
+		existingRefs = append(existingRefs, ref)
+	} else {
+		existingRefs[fi] = ref
+	}
+
+	// Update owner references
+	object.SetOwnerReferences(existingRefs)
+	return nil
+}
+
+// NewOwnerRef creates an OwnerReference pointing to the given owner.
+func NewOwnerRef(owner metav1.Object, gvk schema.GroupVersionKind) *metav1.OwnerReference {
+	blockOwnerDeletion := false
+	isController := false
+	return &metav1.OwnerReference{
+		APIVersion:         gvk.GroupVersion().String(),
+		Kind:               gvk.Kind,
+		Name:               owner.GetName(),
+		UID:                owner.GetUID(),
+		BlockOwnerDeletion: &blockOwnerDeletion,
+		Controller:         &isController,
+	}
+}
+
+// Returns true if a and b point to the same object
+func referSameObject(a, b metav1.OwnerReference) bool {
+	aGV, err := schema.ParseGroupVersion(a.APIVersion)
+	if err != nil {
+		return false
+	}
+
+	bGV, err := schema.ParseGroupVersion(b.APIVersion)
+	if err != nil {
+		return false
+	}
+
+	return aGV == bGV && a.Kind == b.Kind && a.Name == b.Name
 }

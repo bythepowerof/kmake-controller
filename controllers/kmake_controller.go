@@ -217,14 +217,17 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// make yaml config map
 
+	j, err := json.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
 	y, err := yaml.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
 	m, err := instance.Spec.ToMakefile()
 
 	currentkmakemap := &corev1.ConfigMap{}
 	requiredkmakemap := &corev1.ConfigMap{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake", "Kmake"),
-		Data: map[string]string{"kmake.yaml": string(y),
-			"kmake.mk": m},
+		Data: map[string]string{
+			"kmake.yaml": string(y),
+			"kmake.mk":   m,
+			"kmake.json": string(j)},
 	}
 
 	controllerutil.SetControllerReference(instance, requiredkmakemap, r.Scheme)

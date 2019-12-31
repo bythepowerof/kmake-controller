@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"time"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -209,7 +210,18 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
 				}
 
-				controllerutil.SetControllerReference(instance, requiredjob, r.Scheme)
+				if err := SetOwnerReference(kmake, requiredjob, r.Scheme); err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+				if err = SetOwnerReference(run, requiredjob, r.Scheme); err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+				if err = controllerutil.SetControllerReference(instance, requiredjob, r.Scheme); err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Schedule, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
 
 				requiredjob.Spec.Template = run.Spec.KmakeRunOperation.Job.Template
 
@@ -329,6 +341,40 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.KmakeMap)},
+							},
+						},
+					})
+
+				// add in the owner config map
+				j, err := json.Marshal(requiredjob.OwnerReferences)
+				y, err := yaml.Marshal(requiredjob.OwnerReferences)
+
+				ownerconfigmap := &corev1.ConfigMap{
+					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "owner", "owner"),
+					Data: map[string]string{
+						"owner.yaml": string(y),
+						"owner.json": string(j)},
+				}
+				controllerutil.SetControllerReference(instance, ownerconfigmap, r.Scheme)
+				err = r.Create(ctx, ownerconfigmap)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
+
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/owner",
+						Name:      ownerconfigmap.GetName(),
+					})
+
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: ownerconfigmap.GetName(),
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: ownerconfigmap.GetName()},
 							},
 						},
 					})
