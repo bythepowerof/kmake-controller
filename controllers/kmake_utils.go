@@ -98,3 +98,52 @@ func referSameObject(a, b metav1.OwnerReference) bool {
 
 	return aGV == bGV && a.Kind == b.Kind && a.Name == b.Name
 }
+
+type OwnerReferencePatch struct {
+	ApiVersion              string `yaml:"apiVersion"`
+	Kind                    string `yaml:"kind"`
+	*OwnerReferenceMetadata `yaml:"metadata"`
+}
+
+type OwnerReferenceMetadata struct {
+	Name            string            `yaml:"name"`
+	OwnerReferences []*OwnerReference `yaml:"ownerReferences"`
+}
+
+type OwnerReference struct {
+	APIVersion         string    `yaml:"apiVersion"`
+	Kind               string    `yaml:"kind"`
+	Name               string    `yaml:"name"`
+	UID                types.UID `yaml:"uid"`
+	Controller         *bool     `yaml:"controller,omitempty"`
+	BlockOwnerDeletion *bool     `yaml:"blockOwnerDeletion,omitempty"`
+}
+
+func NewOwnerReferencePatch(owner metav1.Object, scheme *runtime.Scheme) *OwnerReferencePatch {
+	ro, ok := owner.(runtime.Object)
+	if !ok {
+		return nil
+	}
+
+	gvk, err := apiutil.GVKForObject(ro, scheme)
+	if err != nil {
+		return nil
+	}
+	t := true
+
+	return &OwnerReferencePatch{
+		ApiVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		OwnerReferenceMetadata: &OwnerReferenceMetadata{
+			Name: "not-important",
+			OwnerReferences: []*OwnerReference{{
+				APIVersion:         gvk.GroupVersion().String(),
+				Kind:               gvk.Kind,
+				Name:               owner.GetName(),
+				UID:                owner.GetUID(),
+				BlockOwnerDeletion: &t,
+				Controller:         &t,
+			}},
+		},
+	}
+}

@@ -205,6 +205,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 						},
 					}
 					controllerutil.SetControllerReference(instance, kmsr, r.Scheme)
+					SetOwnerReference(&run, kmsr, r.Scheme)
 
 					kmsr.SetLabels(map[string]string{
 						"bythepowerof.github.io/kmake":             val,

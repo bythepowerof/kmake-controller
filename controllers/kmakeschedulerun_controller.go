@@ -348,12 +348,19 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				// add in the owner config map
 				j, err := json.Marshal(requiredjob.OwnerReferences)
 				y, err := yaml.Marshal(requiredjob.OwnerReferences)
+				km, err := yaml.Marshal(NewOwnerReferencePatch(kmake, r.Scheme))
+				kmr, err := yaml.Marshal(NewOwnerReferencePatch(run, r.Scheme))
+				kms, err := yaml.Marshal(NewOwnerReferencePatch(instance, r.Scheme))
 
 				ownerconfigmap := &corev1.ConfigMap{
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "owner", "owner"),
 					Data: map[string]string{
-						"owner.yaml": string(y),
-						"owner.json": string(j)},
+						"owner.yaml":                         string(y),
+						"owner.json":                         string(j),
+						"kmake-owner-patch.yaml":             string(km),
+						"kmakerun-owner-patch.yaml":          string(kmr),
+						"kmake-schedulerun-owner-patch.yaml": string(kms),
+					},
 				}
 				controllerutil.SetControllerReference(instance, ownerconfigmap, r.Scheme)
 				err = r.Create(ctx, ownerconfigmap)
