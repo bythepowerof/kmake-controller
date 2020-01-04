@@ -31,28 +31,6 @@ type KmakeNowSchedulerSpec struct {
 	Monitor   []string          `json:"monitor"`
 }
 
-// KmakeNowSchedulerStatus defines the observed state of KmakeNowScheduler
-type KmakeNowSchedulerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	Status    string            `json:"status,omitempty"`
-	Resources map[string]string `json:"resources,omitempty"`
-}
-
-func (status *KmakeNowSchedulerStatus) UpdateSubResource(subresource SubResource, name string) {
-	if name == "" {
-		return
-	}
-	if status.Resources == nil {
-		status.Resources = map[string]string{}
-	}
-	status.Resources[subresource.String()] = name
-}
-
-func (status *KmakeNowSchedulerStatus) NameConcat(subresource SubResource) string {
-	return status.Resources[subresource.String()]
-}
-
 // +kubebuilder:object:root=true
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
@@ -61,8 +39,8 @@ type KmakeNowScheduler struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KmakeNowSchedulerSpec   `json:"spec,omitempty"`
-	Status KmakeNowSchedulerStatus `json:"status,omitempty"`
+	Spec   KmakeNowSchedulerSpec `json:"spec,omitempty"`
+	Status KmakeStatus           `json:"status,omitempty"`
 }
 
 func (kmns *KmakeNowScheduler) IsBeingDeleted() bool {
