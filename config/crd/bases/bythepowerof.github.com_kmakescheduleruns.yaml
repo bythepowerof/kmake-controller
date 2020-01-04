@@ -93,7 +93,7 @@ spec:
         status:
           description: KmakeScheduleRunStatus defines the observed state of KmakeScheduleRun
           properties:
-            kmake_resources:
+            resources:
               additionalProperties:
                 type: string
               type: object

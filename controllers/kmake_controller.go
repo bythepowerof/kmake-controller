@@ -24,23 +24,18 @@ import (
 
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	// "k8s.io/client-go/tools/record"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// ctrl "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/client"
-	corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/kubernetes/pkg/api"
-	// "k8s.io/apimachinery/pkg/types"
-	// "k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/api/equality"
-
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // KmakeReconciler reconciles a Kmake object
@@ -48,6 +43,7 @@ type KmakeReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
 }
 
 func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
@@ -78,14 +74,6 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 	}
 	return nil
 }
-
-// func (r *KmakeReconciler) AppendRun(kmake *bythepowerofv1.Kmake, run *bythepowerofv1.KmakeRun) {
-// 	kmake.Status.Runs = append(kmake.Status.Runs, &bythepowerofv1.KmakeRuns{
-// 		RunName:  run.GetName(),
-// 		RunPhase: bythepowerofv1.Wait.String(),
-// 	})
-// 	r.Status().Update(context.Background(), kmake)
-// }
 
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakes/status,verbs=get;update;patch
@@ -123,9 +111,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	currentpvc := &corev1.PersistentVolumeClaim{}
 	requiredpvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc", "Kmake"),
-
-		Spec: instance.Spec.PersistentVolumeClaimTemplate,
+		Spec:       instance.Spec.PersistentVolumeClaimTemplate,
 	}
+
+	controllerutil.SetControllerReference(instance, requiredpvc, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
 
@@ -186,9 +175,10 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	currentenvmap := &corev1.ConfigMap{}
 	requiredenvmap := &corev1.ConfigMap{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env", "Kmake"),
-
-		Data: instance.Spec.Variables,
+		Data:       instance.Spec.Variables,
 	}
+
+	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
@@ -227,15 +217,20 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// make yaml config map
 
+	j, err := json.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
 	y, err := yaml.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
 	m, err := instance.Spec.ToMakefile()
 
 	currentkmakemap := &corev1.ConfigMap{}
 	requiredkmakemap := &corev1.ConfigMap{
 		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake", "Kmake"),
-		Data: map[string]string{"kmake.yaml": string(y),
-			"kmake.mk": m},
+		Data: map[string]string{
+			"kmake.yaml": string(y),
+			"kmake.mk":   m,
+			"kmake.json": string(j)},
 	}
+
+	controllerutil.SetControllerReference(instance, requiredkmakemap, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
 
@@ -275,7 +270,30 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	runOwnerKey := ".metadata.controller"
+	apiGVStr := bythepowerofv1.GroupVersion.String()
+
+	if err := mgr.GetFieldIndexer().IndexField(&bythepowerofv1.KmakeRun{}, runOwnerKey, func(rawObj runtime.Object) []string {
+		// grab the run object, extract the owner...
+		run := rawObj.(*bythepowerofv1.KmakeRun)
+		owner := metav1.GetControllerOf(run)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Kmake...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Kmake" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.Kmake{}).
+		Owns(&bythepowerofv1.KmakeRun{}).
 		Complete(r)
 }

@@ -50,7 +50,7 @@ spec:
         status:
           description: KmakeNowSchedulerStatus defines the observed state of KmakeNowScheduler
           properties:
-            kmake_resources:
+            resources:
               additionalProperties:
                 type: string
               type: object

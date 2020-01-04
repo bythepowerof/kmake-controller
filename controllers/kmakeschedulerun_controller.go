@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"time"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -27,10 +28,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	// "k8s.io/apimachinery/pkg/labels"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -39,6 +43,7 @@ type KmakeScheduleRunReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
 }
 
 func (r *KmakeScheduleRunReconciler) Event(instance *bythepowerofv1.KmakeScheduleRun, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
@@ -161,7 +166,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				} else {
 					if currentjob.Status.Active > 0 {
 						r.Event(instance, bythepowerofv1.Active, bythepowerofv1.Job, currentjob.GetName())
-						return backoff5, nil
+						return reconcile.Result{}, nil
 					}
 					if currentjob.Status.Succeeded > 0 {
 						r.Event(instance, bythepowerofv1.Success, bythepowerofv1.Job, currentjob.GetName())
@@ -171,7 +176,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 						r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Job, currentjob.GetName())
 						return ctrl.Result{}, nil
 					}
-					return backoff5, nil
+					return reconcile.Result{}, nil
 				}
 			}
 
@@ -184,11 +189,18 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			if err != nil {
 				if errors.IsNotFound(err) {
 					log.Info(fmt.Sprintf("Not found kmake %v", kmakename))
-					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, kmakename)
-					// don't requeue
-					return ctrl.Result{}, nil
+					r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.KMAKE, kmakename)
+					// wait for kmake
+					return backoff5, nil
 				}
 				return ctrl.Result{}, err
+			}
+			pvcName := kmake.GetSubReference(bythepowerofv1.PVC)
+			if pvcName == "" {
+				log.Info(fmt.Sprintf("Not found kmake PVC %v", kmakename))
+				r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, kmakename)
+				// wait for kmake
+				return backoff5, nil
 			}
 
 			// Job
@@ -197,6 +209,20 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				requiredjob := &v1.Job{
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
 				}
+
+				if err := SetOwnerReference(kmake, requiredjob, r.Scheme); err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+				if err = SetOwnerReference(run, requiredjob, r.Scheme); err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+				if err = controllerutil.SetControllerReference(instance, requiredjob, r.Scheme); err != nil {
+					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Schedule, requiredjob.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+
 				requiredjob.Spec.Template = run.Spec.KmakeRunOperation.Job.Template
 
 				// add in the targets as args
@@ -285,7 +311,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
 					corev1.VolumeMount{
 						MountPath: "/usr/share/pvc",
-						Name:      kmake.GetSubReference(bythepowerofv1.PVC),
+						Name:      pvcName,
 					})
 
 				requiredjob.Spec.Template.Spec.Volumes = append(
@@ -319,6 +345,47 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 						},
 					})
 
+				// add in the owner config map
+				j, err := json.Marshal(requiredjob.OwnerReferences)
+				y, err := yaml.Marshal(requiredjob.OwnerReferences)
+				km, err := yaml.Marshal(NewOwnerReferencePatch(kmake, r.Scheme))
+				kmr, err := yaml.Marshal(NewOwnerReferencePatch(run, r.Scheme))
+				kms, err := yaml.Marshal(NewOwnerReferencePatch(instance, r.Scheme))
+
+				ownerconfigmap := &corev1.ConfigMap{
+					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "owner", "owner"),
+					Data: map[string]string{
+						"owner.yaml":                         string(y),
+						"owner.json":                         string(j),
+						"kmake-owner-patch.yaml":             string(km),
+						"kmakerun-owner-patch.yaml":          string(kmr),
+						"kmake-schedulerun-owner-patch.yaml": string(kms),
+					},
+				}
+				controllerutil.SetControllerReference(instance, ownerconfigmap, r.Scheme)
+				err = r.Create(ctx, ownerconfigmap)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
+
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/owner",
+						Name:      ownerconfigmap.GetName(),
+					})
+
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: ownerconfigmap.GetName(),
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: ownerconfigmap.GetName()},
+							},
+						},
+					})
+
 				// fix the restart policy
 				if requiredjob.Spec.Template.Spec.RestartPolicy == "" {
 					requiredjob.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
@@ -331,7 +398,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					return reconcile.Result{}, err
 				}
 				r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Job, requiredjob.ObjectMeta.Name)
-				return backoff5, nil
+				return reconcile.Result{}, nil
 			}
 			if run.Spec.KmakeRunOperation.Dummy != nil {
 				err := r.Event(instance, bythepowerofv1.Success, bythepowerofv1.Dummy, instance.GetName())
@@ -449,11 +516,35 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		}
 		break // because we only expect one key
 	}
-	return backoff5, nil
+
+	return reconcile.Result{}, nil
 }
 
 func (r *KmakeScheduleRunReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	jobOwnerKey := ".metadata.controller"
+	apiGVStr := bythepowerofv1.GroupVersion.String()
+
+	if err := mgr.GetFieldIndexer().IndexField(&v1.Job{}, jobOwnerKey, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		job := rawObj.(*v1.Job)
+		owner := metav1.GetControllerOf(job)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Run...
+		if owner.APIVersion != apiGVStr || owner.Kind != "KmakeScheduleRun" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.KmakeScheduleRun{}).
+		Owns(&v1.Job{}).
 		Complete(r)
 }

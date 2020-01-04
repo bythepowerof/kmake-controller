@@ -93,7 +93,7 @@ type KmakeScheduleRunStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Status    string            `json:"status,omitempty"`
-	Resources map[string]string `json:"kmake_resources,omitempty"`
+	Resources map[string]string `json:"resources,omitempty"`
 }
 
 func (status *KmakeScheduleRunStatus) UpdateSubResource(subresource SubResource, name string) {

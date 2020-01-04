@@ -4568,6 +4568,19 @@ spec:
           required:
           - operation
           type: object
+        status:
+          description: KmakeRunStatus defines the observed state of KmakeRun
+          properties:
+            resources:
+              additionalProperties:
+                type: string
+              type: object
+            status:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              type: string
+          type: object
       type: object
   version: v1
   versions:

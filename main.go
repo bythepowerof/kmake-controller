@@ -66,6 +66,7 @@ func main() {
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("kmake"),
 		Recorder: mgr.GetEventRecorderFor("kmake-controller"),
+		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Kmake")
 		os.Exit(1)
@@ -75,6 +76,7 @@ func main() {
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("KmakeNowScheduler"),
 		Recorder: mgr.GetEventRecorderFor("kmake-now-scheduler-controller"),
+		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KmakeNowScheduler")
 		os.Exit(1)
@@ -83,8 +85,18 @@ func main() {
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("KmakeScheduleRun"),
 		Recorder: mgr.GetEventRecorderFor("kmake-schedule-run-controller"),
+		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KmakeScheduleRun")
+		os.Exit(1)
+	}
+	if err = (&controllers.KmakeRunReconciler{
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeRun"),
+		Recorder: mgr.GetEventRecorderFor("kmake-run-controller"),
+		Scheme:   scheme,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KmakeRun")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

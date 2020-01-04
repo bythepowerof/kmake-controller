@@ -38,10 +38,11 @@ const (
 	SchEnvMap
 	Dummy
 	FileWait
+	Owner
 )
 
 func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait"}[d]
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner"}[d]
 }
 
 type Phase int
@@ -114,7 +115,7 @@ type KmakeStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 	// Runs      []*KmakeRuns      `json:"runs,omitempty"`
 	Status    string            `json:"status,omitempty"`
-	Resources map[string]string `json:"kmake_resources,omitempty"`
+	Resources map[string]string `json:"resources,omitempty"`
 }
 
 func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name string) {
@@ -173,14 +174,18 @@ func (kmake *Kmake) RemoveFinalizer(finalizerName string) {
 }
 
 func (kmake *Kmake) GetSubReference(s SubResource) string {
-	return kmake.Status.Resources[s.String()]
+
+	if name, ok := kmake.Status.Resources[s.String()]; ok {
+		return name
+	}
+	return ""
 }
 
 func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if _, ok := kmake.Status.Resources[subresource.String()]; ok {
+	if name, ok := kmake.Status.Resources[subresource.String()]; ok {
 		return types.NamespacedName{
 			Namespace: kmake.GetNamespace(),
-			Name:      kmake.Status.Resources[subresource.String()],
+			Name:      name,
 		}
 	}
 	return types.NamespacedName{

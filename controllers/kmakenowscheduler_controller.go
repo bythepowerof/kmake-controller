@@ -25,9 +25,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -38,6 +41,7 @@ type KmakeNowSchedulerReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
 }
 
 func (r *KmakeNowSchedulerReconciler) Event(instance *bythepowerofv1.KmakeNowScheduler, phase bythepowerofv1.Phase, subresource bythepowerofv1.SubResource, name string) error {
@@ -76,8 +80,6 @@ func (r *KmakeNowSchedulerReconciler) Event(instance *bythepowerofv1.KmakeNowSch
 // +kubebuilder:rbac:groups=bythepowerof.github.com,resources=kmakenowschedulers/status,verbs=get;update;patch
 
 func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("kmakenowscheduler", req.NamespacedName)
 
 	ctx := context.Background()
 	log := r.Log.WithValues("kmakenowscheduler", req.NamespacedName)
@@ -114,7 +116,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 		Data: instance.Spec.Variables,
 	}
-
+	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
 	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
@@ -202,6 +204,9 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 							},
 						},
 					}
+					controllerutil.SetControllerReference(instance, kmsr, r.Scheme)
+					SetOwnerReference(&run, kmsr, r.Scheme)
+
 					kmsr.SetLabels(map[string]string{
 						"bythepowerof.github.io/kmake":             val,
 						"bythepowerof.github.io/schedule-instance": instance.Name,
@@ -232,7 +237,30 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 }
 
 func (r *KmakeNowSchedulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	kmsrOwnerKey := ".metadata.controller"
+	apiGVStr := bythepowerofv1.GroupVersion.String()
+
+	if err := mgr.GetFieldIndexer().IndexField(&bythepowerofv1.KmakeScheduleRun{}, kmsrOwnerKey, func(rawObj runtime.Object) []string {
+		// grab the run object, extract the owner...
+		kmsr := rawObj.(*bythepowerofv1.KmakeScheduleRun)
+		owner := metav1.GetControllerOf(kmsr)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a now scheduler...
+		if owner.APIVersion != apiGVStr || owner.Kind != "KmakeNowScheduler" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.KmakeNowScheduler{}).
+		Owns(&bythepowerofv1.KmakeScheduleRun{}).
 		Complete(r)
 }
