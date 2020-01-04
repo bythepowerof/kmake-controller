@@ -187,7 +187,7 @@ spec:
           - rules
           type: object
         status:
-          description: KmakeStatus defines the observed state of Kmake
+          description: KmakeStatus defines the observed state of Kmake things
           properties:
             resources:
               additionalProperties:
