@@ -100,10 +100,25 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if instance.IsBeingDeleted() {
+		err = r.handleFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
+		}
 		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		return ctrl.Result{}, nil
+	}
+
+	if !instance.HasFinalizer(bythepowerofv1.KmakeFinalizerName) {
+		err = r.addFinalizer(instance)
+		if err != nil {
+			r.Recorder.Event(instance, corev1.EventTypeWarning, "Adding finalizer", fmt.Sprintf("Failed to add finalizer: %s", err))
+			return reconcile.Result{}, fmt.Errorf("error when handling secret scope finalizer: %v", err)
+		}
+		r.Recorder.Event(instance, corev1.EventTypeNormal, "Added", "Object finalizer is added")
 		return ctrl.Result{}, nil
 	}
 

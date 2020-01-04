@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -146,4 +147,16 @@ func NewOwnerReferencePatch(owner metav1.Object, scheme *runtime.Scheme) *OwnerR
 			}},
 		},
 	}
+}
+
+/*
+We generally want to ignore (not requeue) NotFound errors, since we'll get a
+reconciliation request once the object exists, and requeuing in the meantime
+won't help.
+*/
+func ignoreNotFound(err error) error {
+	if apierrs.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
