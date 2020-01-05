@@ -91,7 +91,7 @@ spec:
           - operation
           type: object
         status:
-          description: KmakeScheduleRunStatus defines the observed state of KmakeScheduleRun
+          description: KmakeStatus defines the observed state of Kmake things
           properties:
             resources:
               additionalProperties:
@@ -100,7 +100,7 @@ spec:
             status:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
-                this file'
+                this file Runs      []*KmakeRuns      `json:"runs,omitempty"`'
               type: string
           type: object
       type: object
