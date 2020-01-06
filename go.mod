@@ -3,12 +3,14 @@ module github.com/bythepowerof/kmake-controller
 go 1.13
 
 require (
+	github.com/activeshadow/logr v0.2.0
 	github.com/go-logr/logr v0.1.0
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20191021144547-ec77196f6094 // indirect
