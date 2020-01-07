@@ -16,8 +16,9 @@ limitations under the License.
 package main
 
 import (
-	"flag"
+	"github.com/namsral/flag"
 	"os"
+	"strings"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	"github.com/bythepowerof/kmake-controller/controllers"
@@ -46,11 +47,15 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var enablePrettyPrint bool
+	var namespace string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&enablePrettyPrint, "enable-pretty-print", false,
 		"Enable pretty print JSON logging")
+	flag.StringVar(&namespace, "namespace", "all",
+		"Namespace to watch - use 'all' for all namespaces")
+
 	flag.Parse()
 
 	// Create new "foo" logger that's enabled and has a verbosity level of 1.
@@ -62,14 +67,22 @@ func main() {
 	logger := logrusr.New("kmake", *l)
 
 	ctrl.SetLogger(logger)
-	// ctrl.SetLogger(zap.Logger(true))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	options := ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
-	})
+	}
+
+	setupLog.Info("watching", "namespace", namespace)
+
+	if strings.ToLower(namespace) != "all" {
+		options.Namespace = namespace
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
+
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -77,7 +90,7 @@ func main() {
 
 	if err = (&controllers.KmakeReconciler{
 		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("kmake"),
+		Log:      ctrl.Log.WithName("controllers").WithName("kmake").WithName(namespace),
 		Recorder: mgr.GetEventRecorderFor("kmake-controller"),
 		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {
@@ -87,7 +100,7 @@ func main() {
 
 	if err = (&controllers.KmakeNowSchedulerReconciler{
 		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("KmakeNowScheduler"),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeNowScheduler").WithName(namespace),
 		Recorder: mgr.GetEventRecorderFor("kmake-now-scheduler-controller"),
 		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {
@@ -96,7 +109,7 @@ func main() {
 	}
 	if err = (&controllers.KmakeScheduleRunReconciler{
 		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("KmakeScheduleRun"),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeScheduleRun").WithName(namespace),
 		Recorder: mgr.GetEventRecorderFor("kmake-schedule-run-controller"),
 		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {
@@ -105,7 +118,7 @@ func main() {
 	}
 	if err = (&controllers.KmakeRunReconciler{
 		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("KmakeRun"),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeRun").WithName(namespace),
 		Recorder: mgr.GetEventRecorderFor("kmake-run-controller"),
 		Scheme:   scheme,
 	}).SetupWithManager(mgr); err != nil {

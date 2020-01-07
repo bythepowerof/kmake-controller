@@ -8,6 +8,7 @@ require (
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/namsral/flag v1.7.4-pre
 	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.0
 	github.com/sirupsen/logrus v1.4.2

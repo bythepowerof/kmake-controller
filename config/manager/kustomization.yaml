@@ -6,3 +6,9 @@ images:
 - name: controller
   newName: bythepowerof/kmake-controller
   newTag: latest
+configMapGenerator:
+    - name: manager-env
+      literals:
+        - ENABLE_LEADER_ELECTION=true
+        - NAMESPACE=default
+        - ENABLE_PRETTY_PRINT=true
