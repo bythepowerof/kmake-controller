@@ -108,15 +108,27 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	if instance.IsBeingDeleted() {
-		r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		err = r.handleFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
+		}
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
-	if instance.HasEnded() {
-		return ctrl.Result{}, nil
-	}
+	if !instance.HasFinalizer(bythepowerofv1.KmakeScheduleRunFinalizerName) {
+		err = r.addFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
 
-	if !instance.IsActive() {
+			return reconcile.Result{}, fmt.Errorf("error when handling kmakeschedulerun finalizer: %v", err)
+		}
+		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
+
 		return ctrl.Result{}, nil
 	}
 
@@ -136,6 +148,15 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			kmakename := instance.GetKmakeName()
 			kmakerun := instance.GetKmakeRunName()
 			kmakescheduleEnv := instance.GetKmakeScheduleEnvName()
+
+			if instance.HasEnded() {
+				return ctrl.Result{}, nil
+			}
+
+			if !instance.IsActive() {
+				// make sure the job isn't pending...
+				return ctrl.Result{}, nil
+			}
 
 			// get kmakerun
 			run := &bythepowerofv1.KmakeRun{}
@@ -435,14 +456,13 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				if err != nil {
 					if !errors.IsNotFound(err) {
 						return reconcile.Result{}, err
-					} else {
-						err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
-						return reconcile.Result{}, err
 					}
-				} else {
-					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
+					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No resources found")
 					return reconcile.Result{}, err
+
 				}
+				err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
+				return reconcile.Result{}, err
 			}
 		case "stop":
 			if instance.IsNew() {

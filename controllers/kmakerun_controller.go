@@ -107,12 +107,12 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	if !instance.HasFinalizer(bythepowerofv1.KmakeFinalizerName) {
+	if !instance.HasFinalizer(bythepowerofv1.KmakeRunFinalizerName) {
 		err = r.addFinalizer(instance)
 		if err != nil {
 			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
 
-			return reconcile.Result{}, fmt.Errorf("error when handling secret scope finalizer: %v", err)
+			return reconcile.Result{}, fmt.Errorf("error when handling kmakerun finalizer: %v", err)
 		}
 		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
 

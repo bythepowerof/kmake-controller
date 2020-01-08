@@ -116,7 +116,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		err = r.addFinalizer(instance)
 		if err != nil {
 			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
-			return reconcile.Result{}, fmt.Errorf("error when handling secret scope finalizer: %v", err)
+			return reconcile.Result{}, fmt.Errorf("error when handling kmake finalizer: %v", err)
 		}
 		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
 		return ctrl.Result{}, nil
@@ -310,5 +310,7 @@ func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.Kmake{}).
 		Owns(&bythepowerofv1.KmakeRun{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }

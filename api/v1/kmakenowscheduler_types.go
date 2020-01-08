@@ -64,6 +64,20 @@ func (kmns *KmakeNowScheduler) NamespacedNameConcat(subresource SubResource) typ
 	}
 }
 
+const KmakeNowSchedulerFinalizerName = "kmakenowscheduler.finalizers.bythepowerof.github.com"
+
+func (kmakenowscheduler *KmakeNowScheduler) HasFinalizer(finalizerName string) bool {
+	return containsString(kmakenowscheduler.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakenowscheduler *KmakeNowScheduler) AddFinalizer(finalizerName string) {
+	kmakenowscheduler.ObjectMeta.Finalizers = append(kmakenowscheduler.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakenowscheduler *KmakeNowScheduler) RemoveFinalizer(finalizerName string) {
+	kmakenowscheduler.ObjectMeta.Finalizers = removeString(kmakenowscheduler.ObjectMeta.Finalizers, finalizerName)
+}
+
 // +kubebuilder:object:root=true
 
 // KmakeNowSchedulerList contains a list of KmakeNowScheduler

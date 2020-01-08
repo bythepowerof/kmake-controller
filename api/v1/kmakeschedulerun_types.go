@@ -179,6 +179,29 @@ func (kmsr *KmakeScheduleRun) GetKmakeScheduleEnvName() string {
 	}
 }
 
+func (kmsr *KmakeScheduleRun) GetJobName() string {
+	value, ok := kmsr.Status.Resources["Job"]
+	if ok {
+		return value
+	} else {
+		return ""
+	}
+}
+
+const KmakeScheduleRunFinalizerName = "kmakeschedulerun.finalizers.bythepowerof.github.com"
+
+func (kmakerun *KmakeScheduleRun) HasFinalizer(finalizerName string) bool {
+	return containsString(kmakerun.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakeschedulerun *KmakeScheduleRun) AddFinalizer(finalizerName string) {
+	kmakeschedulerun.ObjectMeta.Finalizers = append(kmakeschedulerun.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakeschedulerun *KmakeScheduleRun) RemoveFinalizer(finalizerName string) {
+	kmakeschedulerun.ObjectMeta.Finalizers = removeString(kmakeschedulerun.ObjectMeta.Finalizers, finalizerName)
+}
+
 // +kubebuilder:object:root=true
 // KmakeScheduleRunList contains a list of KmakeScheduleRun
 type KmakeScheduleRunList struct {
