@@ -30,7 +30,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -102,12 +101,28 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	if instance.IsBeingDeleted() {
+		err = r.handleFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
+		}
 		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
+
+	if !instance.HasFinalizer(bythepowerofv1.KmakeNowSchedulerFinalizerName) {
+		err = r.addFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling kmakenowscheduler finalizer: %v", err)
+		}
+		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
+		return ctrl.Result{}, nil
+	}
+
 	// env configmap
 
 	currentenvmap := &corev1.ConfigMap{}
@@ -116,7 +131,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 		Data: instance.Spec.Variables,
 	}
-	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
+	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
 	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
@@ -195,6 +210,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 						break
 					}
 				}
+
 				if !found {
 					kmsr := &bythepowerofv1.KmakeScheduleRun{
 						ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmsr", "KmakeNowScheduler"),
@@ -204,7 +220,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 							},
 						},
 					}
-					controllerutil.SetControllerReference(instance, kmsr, r.Scheme)
+					ctrl.SetControllerReference(instance, kmsr, r.Scheme)
 					SetOwnerReference(&run, kmsr, r.Scheme)
 
 					kmsr.SetLabels(map[string]string{
@@ -262,5 +278,6 @@ func (r *KmakeNowSchedulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.KmakeNowScheduler{}).
 		Owns(&bythepowerofv1.KmakeScheduleRun{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
