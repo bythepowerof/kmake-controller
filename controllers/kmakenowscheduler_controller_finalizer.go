@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -44,6 +44,12 @@ func (r *KmakeNowSchedulerReconciler) handleFinalizer(instance *bythepowerofv1.K
 			client.InNamespace(instance.Namespace)})
 		labels := client.MatchingLabels{}
 		labels["bythepowerof.github.io/schedule-instance"] = instance.Name
+
+		policy := metav1.DeletePropagationBackground
+		o := &client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{PropagationPolicy: &policy}}
+
+		do.ApplyToDeleteAllOf(o)
+
 		do.ApplyOptions([]client.DeleteAllOfOption{labels})
 		if err := r.DeleteAllOf(context.Background(), del, do); err != nil {
 			return err

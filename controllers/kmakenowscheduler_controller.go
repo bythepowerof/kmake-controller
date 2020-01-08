@@ -30,7 +30,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -132,7 +131,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 		Data: instance.Spec.Variables,
 	}
-	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
+	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
 	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
@@ -221,7 +220,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 							},
 						},
 					}
-					controllerutil.SetControllerReference(instance, kmsr, r.Scheme)
+					ctrl.SetControllerReference(instance, kmsr, r.Scheme)
 					SetOwnerReference(&run, kmsr, r.Scheme)
 
 					kmsr.SetLabels(map[string]string{

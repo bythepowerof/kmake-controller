@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -45,6 +45,12 @@ func (r *KmakeReconciler) handleFinalizer(instance *bythepowerofv1.Kmake) error 
 		labels := client.MatchingLabels{}
 		labels["bythepowerof.github.io/kmake"] = instance.Name
 		do.ApplyOptions([]client.DeleteAllOfOption{labels})
+
+		policy := metav1.DeletePropagationBackground
+		o := &client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{PropagationPolicy: &policy}}
+
+		do.ApplyToDeleteAllOf(o)
+
 		if err := r.DeleteAllOf(context.Background(), del, do); err != nil {
 			return err
 		}

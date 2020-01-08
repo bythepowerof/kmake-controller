@@ -21,6 +21,9 @@ import (
 	"fmt"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
+	v1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *KmakeScheduleRunReconciler) addFinalizer(instance *bythepowerofv1.KmakeScheduleRun) error {
@@ -34,8 +37,28 @@ func (r *KmakeScheduleRunReconciler) addFinalizer(instance *bythepowerofv1.Kmake
 
 func (r *KmakeScheduleRunReconciler) handleFinalizer(instance *bythepowerofv1.KmakeScheduleRun) error {
 	if instance.HasFinalizer(bythepowerofv1.KmakeScheduleRunFinalizerName) {
-		// Nothing here to do at the moment
+		// remove all jobs owned by us
+		del := &v1.Job{}
 
+		do := &client.DeleteAllOfOptions{}
+		do.ApplyOptions([]client.DeleteAllOfOption{
+			client.InNamespace(instance.Namespace)})
+		labels := client.MatchingLabels{}
+		labels["bythepowerof.github.io/schedulerun"] = instance.Name
+		do.ApplyOptions([]client.DeleteAllOfOption{labels})
+
+		policy := metav1.DeletePropagationBackground
+		o := &client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{PropagationPolicy: &policy}}
+
+		do.ApplyToDeleteAllOf(o)
+
+		if err := r.DeleteAllOf(context.Background(), del, do); err != nil {
+			return err
+		}
+		instance.RemoveFinalizer(bythepowerofv1.KmakeNowSchedulerFinalizerName)
+		if err := r.Update(context.Background(), instance); err != nil {
+			return err
+		}
 		instance.RemoveFinalizer(bythepowerofv1.KmakeScheduleRunFinalizerName)
 		if err := r.Update(context.Background(), instance); err != nil {
 			return err

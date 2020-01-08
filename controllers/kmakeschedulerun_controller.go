@@ -34,7 +34,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -231,6 +230,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
 				}
 
+				requiredjob.Labels["bythepowerof.github.io/schedulerun"] = instance.GetName()
+				ctrl.SetControllerReference(instance, requiredjob, r.Scheme)
+
 				if err := SetOwnerReference(kmake, requiredjob, r.Scheme); err != nil {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.KMAKE, requiredjob.ObjectMeta.Name)
 					return reconcile.Result{}, err
@@ -239,7 +241,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, requiredjob.ObjectMeta.Name)
 					return reconcile.Result{}, err
 				}
-				if err = controllerutil.SetControllerReference(instance, requiredjob, r.Scheme); err != nil {
+				if err = ctrl.SetControllerReference(instance, requiredjob, r.Scheme); err != nil {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Schedule, requiredjob.ObjectMeta.Name)
 					return reconcile.Result{}, err
 				}
@@ -383,7 +385,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 						"kmake-schedulerun-owner-patch.yaml": string(kms),
 					},
 				}
-				controllerutil.SetControllerReference(instance, ownerconfigmap, r.Scheme)
+				ctrl.SetControllerReference(instance, ownerconfigmap, r.Scheme)
 				err = r.Create(ctx, ownerconfigmap)
 				if err != nil {
 					return reconcile.Result{}, err

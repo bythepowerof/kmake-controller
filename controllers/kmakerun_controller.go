@@ -28,7 +28,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
@@ -139,7 +138,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// just add in the kmake as an owner - leave any other owners alone
 	if instance.OwnerReferences == nil {
-		controllerutil.SetControllerReference(kmake, instance, r.Scheme)
+		ctrl.SetControllerReference(kmake, instance, r.Scheme)
 
 		r.Event(instance, bythepowerofv1.Update, bythepowerofv1.KMAKE, kmakename)
 
@@ -154,7 +153,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, nil
 		}
 	}
-	controllerutil.SetControllerReference(kmake, instance, r.Scheme)
+	ctrl.SetControllerReference(kmake, instance, r.Scheme)
 	r.Event(instance, bythepowerofv1.Update, bythepowerofv1.KMAKE, kmakename)
 
 	err = r.Update(ctx, instance)
