@@ -9,9 +9,9 @@ So multiple clusters can be supported from the same container with the resource 
 
 ### Build status
 
-| Platform    | CI Status | Coverage | Report Card |
-|------------|:-------|:------------|:------- |
-linux       | [![Build Status](https://travis-ci.org/bythepowerof/kmake-controller.svg?branch=master)](https://travis-ci.org/bythepowerof/kmake-controller) | [![codecov](https://codecov.io/gh/bythepowerof/kmake-controller/branch/master/graph/badge.svg)](https://codecov.io/gh/bythepowerof/kmake-controller) | [![Go Report Card](https://goreportcard.com/badge/github.com/bythepowerof/kmake-controller)](https://goreportcard.com/report/github.com/bythepowerof/kmake-controller)
+| Platform    | CI Status | Coverage | Report Card | Documentation |
+|------------|:-------|:------------|:------- |----------- |
+linux       | [![Build Status](https://travis-ci.org/bythepowerof/kmake-controller.svg?branch=master)](https://travis-ci.org/bythepowerof/kmake-controller) | [![codecov](https://codecov.io/gh/bythepowerof/kmake-controller/branch/master/graph/badge.svg)](https://codecov.io/gh/bythepowerof/kmake-controller) | [![Go Report Card](https://goreportcard.com/badge/github.com/bythepowerof/kmake-controller)](https://goreportcard.com/report/github.com/bythepowerof/kmake-controller) | [![GoDoc](https://godoc.org/github.com/bythepowerof/kmake-controller?status.svg)](https://godoc.org/github.com/bythepowerof/kmake-controller) |
 
 
 
