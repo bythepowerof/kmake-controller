@@ -97,6 +97,20 @@ func (kmsr *KmakeRun) GetKmakeName() string {
 	}
 }
 
+const KmakeRunFinalizerName = "kmakerun.finalizers.bythepowerof.github.com"
+
+func (kmakerun *KmakeRun) HasFinalizer(finalizerName string) bool {
+	return containsString(kmakerun.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakerun *KmakeRun) AddFinalizer(finalizerName string) {
+	kmakerun.ObjectMeta.Finalizers = append(kmakerun.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakerun *KmakeRun) RemoveFinalizer(finalizerName string) {
+	kmakerun.ObjectMeta.Finalizers = removeString(kmakerun.ObjectMeta.Finalizers, finalizerName)
+}
+
 // +kubebuilder:object:root=true
 // KmakeRunList contains a list of KmakeRun
 type KmakeRunList struct {

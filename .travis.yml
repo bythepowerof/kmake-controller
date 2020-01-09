@@ -21,3 +21,4 @@ script:
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)
+- test $TRAVIS_BRANCH = "master" && curl -d "repo=github.com/bythepowerof/kmake-controller" https://goreportcard.com/checks

@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // KmakeReconciler reconciles a Kmake object
@@ -100,10 +99,25 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if instance.IsBeingDeleted() {
+		err = r.handleFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
+		}
 		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		return ctrl.Result{}, nil
+	}
+
+	if !instance.HasFinalizer(bythepowerofv1.KmakeFinalizerName) {
+		err = r.addFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling kmake finalizer: %v", err)
+		}
+		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
 		return ctrl.Result{}, nil
 	}
 
@@ -114,7 +128,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Spec:       instance.Spec.PersistentVolumeClaimTemplate,
 	}
 
-	controllerutil.SetControllerReference(instance, requiredpvc, r.Scheme)
+	ctrl.SetControllerReference(instance, requiredpvc, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
 
@@ -178,7 +192,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Data:       instance.Spec.Variables,
 	}
 
-	controllerutil.SetControllerReference(instance, requiredenvmap, r.Scheme)
+	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
@@ -230,7 +244,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			"kmake.json": string(j)},
 	}
 
-	controllerutil.SetControllerReference(instance, requiredkmakemap, r.Scheme)
+	ctrl.SetControllerReference(instance, requiredkmakemap, r.Scheme)
 
 	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
 
@@ -295,5 +309,7 @@ func (r *KmakeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&bythepowerofv1.Kmake{}).
 		Owns(&bythepowerofv1.KmakeRun{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }

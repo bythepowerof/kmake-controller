@@ -109,34 +109,6 @@ func (kmake *KmakeSpec) ToMakefile() (string, error) {
 	return b.String(), nil
 }
 
-// KmakeStatus defines the observed state of Kmake
-type KmakeStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// Runs      []*KmakeRuns      `json:"runs,omitempty"`
-	Status    string            `json:"status,omitempty"`
-	Resources map[string]string `json:"resources,omitempty"`
-}
-
-func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name string) {
-	if name == "" {
-		return
-	}
-	if status.Resources == nil {
-		status.Resources = map[string]string{}
-	}
-	status.Resources[subresource.String()] = name
-}
-
-func (status *KmakeStatus) NameConcat(subresource SubResource) string {
-	return status.Resources[subresource.String()]
-}
-
-// type KmakeRuns struct {
-// 	RunName  string `json:"run_name,omitempty"`
-// 	RunPhase string `json:"run_phase,omitempty"`
-// }
-
 // Kmake is the Schema for the kmakes API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
@@ -150,10 +122,6 @@ type Kmake struct {
 	Spec   KmakeSpec   `json:"spec,omitempty"`
 	Status KmakeStatus `json:"status,omitempty"`
 }
-
-// func (kmake *Kmake) IsSubmitted() bool {
-// 	return kmake.Status.Status != ""
-// }
 
 func (kmake *Kmake) IsBeingDeleted() bool {
 	return !kmake.ObjectMeta.DeletionTimestamp.IsZero()
@@ -195,7 +163,6 @@ func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.Namespac
 }
 
 // +kubebuilder:object:root=true
-
 // KmakeList contains a list of Kmake
 type KmakeList struct {
 	metav1.TypeMeta `json:",inline"`

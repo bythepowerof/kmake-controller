@@ -54,3 +54,26 @@ func randomStringWithCharset(length int, charset string) string {
 func RandomString(length int) string {
 	return randomStringWithCharset(length, charset)
 }
+
+// KmakeStatus defines the observed state of Kmake things
+type KmakeStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	// Runs      []*KmakeRuns      `json:"runs,omitempty"`
+	Status    string            `json:"status,omitempty"`
+	Resources map[string]string `json:"resources,omitempty"`
+}
+
+func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name string) {
+	if name == "" {
+		return
+	}
+	if status.Resources == nil {
+		status.Resources = map[string]string{}
+	}
+	status.Resources[subresource.String()] = name
+}
+
+func (status *KmakeStatus) NameConcat(subresource SubResource) string {
+	return status.Resources[subresource.String()]
+}
