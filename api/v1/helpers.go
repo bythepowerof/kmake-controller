@@ -77,3 +77,24 @@ func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name strin
 func (status *KmakeStatus) NameConcat(subresource SubResource) string {
 	return status.Resources[subresource.String()]
 }
+
+type KmakeRule struct {
+	Targets       []string `json:"targets"`
+	DoubleColon   bool     `json:"doublecolon,omitempty"`
+	Commands      []string `json:"commands,omitempty"`
+	Prereqs       []string `json:"prereqs,omitempty"`
+	TargetPattern string   `json:"targetpattern,omitempty"`
+}
+
+// +kubebuilder:object:generate=false
+type KmakeScheduler interface {
+	GetName() string
+	GetNamespace() string
+	Variables() []KV
+	Monitor() []string
+}
+
+type KV struct {
+	Key   string
+	Value string
+}

@@ -170,14 +170,6 @@ type KmakeList struct {
 	Items           []Kmake `json:"items"`
 }
 
-type KmakeRule struct {
-	Targets       []string `json:"targets"`
-	DoubleColon   bool     `json:"doublecolon,omitempty"`
-	Commands      []string `json:"commands,omitempty"`
-	Prereqs       []string `json:"prereqs,omitempty"`
-	TargetPattern string   `json:"targetpattern,omitempty"`
-}
-
 func init() {
 	SchemeBuilder.Register(&Kmake{}, &KmakeList{})
 }
