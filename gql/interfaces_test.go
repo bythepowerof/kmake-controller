@@ -1,6 +1,7 @@
-package v1
+package gql
 
 import (
+	"github.com/bythepowerof/kmake-controller/api/v1"
 	. "launchpad.net/gocheck"
 	"testing"
 )
@@ -14,7 +15,7 @@ type MySuite struct{}
 var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestKmakeNowScheduler(c *C) {
-	v := KmakeNowScheduler{}
+	v := v1.KmakeNowScheduler{}
 	var i interface{} = v
 	_, ok := i.(KmakeScheduler)
 	c.Assert(ok, Equals, false)

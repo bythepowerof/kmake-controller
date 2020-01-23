@@ -86,14 +86,6 @@ type KmakeRule struct {
 	TargetPattern string   `json:"targetpattern,omitempty"`
 }
 
-// +kubebuilder:object:generate=false
-type KmakeScheduler interface {
-	GetName() string
-	GetNamespace() string
-	Variables() []KV
-	Monitor() []string
-}
-
 type KV struct {
 	Key   string
 	Value string
