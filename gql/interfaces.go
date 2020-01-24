@@ -5,6 +5,10 @@ import (
 	"github.com/bythepowerof/kmake-controller/api/v1"
 )
 
+type KmakeObject interface {
+	GetName() string
+	GetNamespace() string
+}
 type KmakeScheduler interface {
 	GetName() string
 	GetNamespace() string
