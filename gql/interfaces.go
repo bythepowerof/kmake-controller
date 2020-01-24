@@ -15,3 +15,7 @@ type KmakeScheduler interface {
 	Variables() []v1.KV
 	Monitor() []string
 }
+
+type KmakeRunOperation interface {
+	Dummy() string
+}

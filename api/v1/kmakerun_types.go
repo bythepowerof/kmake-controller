@@ -43,9 +43,17 @@ type KmakeRunJob struct {
 	Template corev1.PodTemplateSpec `json:"template"`
 }
 
+func (k *KmakeRunJob) Dummy() string {
+	return "KmakeRunJob"
+}
+
 type KmakeRunDummy struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+}
+
+func (k *KmakeRunDummy) Dummy() string {
+	return "KmakeRunDummy"
 }
 
 type KmakeRunFileWait struct {
@@ -55,22 +63,8 @@ type KmakeRunFileWait struct {
 	Files []string `json:"files,omitempty"`
 }
 
-// KmakeRunStatus defines the observed state of KmakeRun
-type KmakeRunStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	Status    string            `json:"status,omitempty"`
-	Resources map[string]string `json:"resources,omitempty"`
-}
-
-func (status *KmakeRunStatus) UpdateSubResource(subresource SubResource, name string) {
-	if name == "" {
-		return
-	}
-	if status.Resources == nil {
-		status.Resources = map[string]string{}
-	}
-	status.Resources[subresource.String()] = name
+func (k *KmakeRunFileWait) Dummy() string {
+	return "KmakeRunFileWait"
 }
 
 // +kubebuilder:object:root=true
@@ -80,8 +74,8 @@ type KmakeRun struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KmakeRunSpec   `json:"spec,omitempty"`
-	Status KmakeRunStatus `json:"status,omitempty"`
+	Spec   KmakeRunSpec `json:"spec,omitempty"`
+	Status KmakeStatus  `json:"status,omitempty"`
 }
 
 func (kmake *KmakeRun) IsBeingDeleted() bool {

@@ -68,3 +68,36 @@ func (s *MySuite) TestKmakeScheduleRunIsKmakeObject(c *C) {
 	_, ok = p.(KmakeObject)
 	c.Assert(ok, Equals, true)
 }
+
+func (s *MySuite) TestKmakeRunJobIsKmakeRunOperation(c *C) {
+	v := v1.KmakeRunJob{}
+	var i interface{} = v
+	_, ok := i.(KmakeRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeRunDummyIsKmakeRunOperation(c *C) {
+	v := v1.KmakeRunDummy{}
+	var i interface{} = v
+	_, ok := i.(KmakeRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeRunFileWaitIsKmakeRunOperation(c *C) {
+	v := v1.KmakeRunFileWait{}
+	var i interface{} = v
+	_, ok := i.(KmakeRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeRunOperation)
+	c.Assert(ok, Equals, true)
+}
