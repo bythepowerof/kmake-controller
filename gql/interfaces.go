@@ -19,3 +19,7 @@ type KmakeScheduler interface {
 type KmakeRunOperation interface {
 	Dummy() string
 }
+
+type KmakeScheduleRunOperation interface {
+	Dummy() string
+}

@@ -101,3 +101,69 @@ func (s *MySuite) TestKmakeRunFileWaitIsKmakeRunOperation(c *C) {
 	_, ok = p.(KmakeRunOperation)
 	c.Assert(ok, Equals, true)
 }
+
+func (s *MySuite) TestKmakeScheduleRunStartIsKmakeScheduleRunOperation(c *C) {
+	v := v1.KmakeScheduleRunStart{}
+	var i interface{} = v
+	_, ok := i.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeScheduleRunStoptIsKmakeScheduleRunOperation(c *C) {
+	v := v1.KmakeScheduleRunStop{}
+	var i interface{} = v
+	_, ok := i.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeScheduleDeleteIsKmakeScheduleRunOperation(c *C) {
+	v := v1.KmakeScheduleDelete{}
+	var i interface{} = v
+	_, ok := i.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeScheduleCreateIsKmakeScheduleRunOperation(c *C) {
+	v := v1.KmakeScheduleCreate{}
+	var i interface{} = v
+	_, ok := i.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeScheduleResetIsKmakeScheduleRunOperation(c *C) {
+	v := v1.KmakeScheduleReset{}
+	var i interface{} = v
+	_, ok := i.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, true)
+}
+
+func (s *MySuite) TestKmakeScheduleForceIsKmakeScheduleRunOperation(c *C) {
+	v := v1.KmakeScheduleForce{}
+	var i interface{} = v
+	_, ok := i.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, false)
+
+	var p interface{} = &v
+	_, ok = p.(KmakeScheduleRunOperation)
+	c.Assert(ok, Equals, true)
+}
