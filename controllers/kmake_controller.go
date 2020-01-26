@@ -280,6 +280,8 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return requeue, nil
 	}
 	// return requeue, nil
+	err = r.Event(instance, bythepowerofv1.Ready, bythepowerofv1.Main, "")
+
 	return ctrl.Result{}, nil
 }
 

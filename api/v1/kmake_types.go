@@ -59,10 +59,11 @@ const (
 	Wait
 	Stop
 	Restart
+	Ready
 )
 
 func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart"}[d]
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -149,6 +150,10 @@ func (kmake *Kmake) GetSubReference(s SubResource) string {
 	return ""
 }
 
+func (kmake *Kmake) GetStatus() string {
+	return kmake.Status.Status
+}
+
 func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
 	if name, ok := kmake.Status.Resources[subresource.String()]; ok {
 		return types.NamespacedName{
@@ -168,14 +173,6 @@ type KmakeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Kmake `json:"items"`
-}
-
-type KmakeRule struct {
-	Targets       []string `json:"targets"`
-	DoubleColon   bool     `json:"doublecolon,omitempty"`
-	Commands      []string `json:"commands,omitempty"`
-	Prereqs       []string `json:"prereqs,omitempty"`
-	TargetPattern string   `json:"targetpattern,omitempty"`
 }
 
 func init() {

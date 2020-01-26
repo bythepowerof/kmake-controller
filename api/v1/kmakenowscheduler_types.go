@@ -78,6 +78,23 @@ func (kmakenowscheduler *KmakeNowScheduler) RemoveFinalizer(finalizerName string
 	kmakenowscheduler.ObjectMeta.Finalizers = removeString(kmakenowscheduler.ObjectMeta.Finalizers, finalizerName)
 }
 
+func (kmakenowscheduler *KmakeNowScheduler) Variables() []KV {
+	ret := make([]KV, 0)
+
+	for k, v := range kmakenowscheduler.Spec.Variables {
+		ret = append(ret, KV{Key: k, Value: v})
+	}
+	return ret
+}
+
+func (kmakenowscheduler *KmakeNowScheduler) Monitor() []string {
+	return kmakenowscheduler.Spec.Monitor
+}
+
+func (kmakenowscheduler *KmakeNowScheduler) GetStatus() string {
+	return kmakenowscheduler.Status.Status
+}
+
 // +kubebuilder:object:root=true
 
 // KmakeNowSchedulerList contains a list of KmakeNowScheduler

@@ -47,10 +47,18 @@ type KmakeScheduleRunStart struct {
 	// Run      string `json:"run,omitempty"`
 }
 
+func (k *KmakeScheduleRunStart) Dummy() string {
+	return "KmakeScheduleRunStart"
+}
+
 type KmakeScheduleRunRestart struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Run string `json:"run,omitempty"`
+}
+
+func (k *KmakeScheduleRunRestart) Dummy() string {
+	return "KmakeScheduleRunRestart"
 }
 
 type KmakeScheduleRunStop struct {
@@ -59,10 +67,18 @@ type KmakeScheduleRunStop struct {
 	Run string `json:"run,omitempty"`
 }
 
+func (k *KmakeScheduleRunStop) Dummy() string {
+	return "KmakeScheduleRunStop"
+}
+
 type KmakeScheduleDelete struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	// Schedule string `json:"schedule,omitempty"`
+}
+
+func (k *KmakeScheduleDelete) Dummy() string {
+	return "KmakeScheduleDelete"
 }
 
 type KmakeScheduleCreate struct {
@@ -72,11 +88,19 @@ type KmakeScheduleCreate struct {
 	// Schedule string `json:"schedule,omitempty"`
 }
 
+func (k *KmakeScheduleCreate) Dummy() string {
+	return "KmakeScheduleCreate"
+}
+
 type KmakeScheduleReset struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Recurse string `json:"recurse,omitempty"`
 	Full    string `json:"full,omitempty"`
+}
+
+func (k *KmakeScheduleReset) Dummy() string {
+	return "KmakeScheduleReset"
 }
 
 type KmakeScheduleForce struct {
@@ -86,6 +110,10 @@ type KmakeScheduleForce struct {
 	// Schedule  string `json:"schedule,omitempty"`
 	Operation string `json:"operation,omitempty"`
 	Recurse   string `json:"recurse,omitempty"`
+}
+
+func (k *KmakeScheduleForce) Dummy() string {
+	return "KmakeScheduleForce"
 }
 
 // +kubebuilder:object:root=true
@@ -200,6 +228,10 @@ func (kmakeschedulerun *KmakeScheduleRun) AddFinalizer(finalizerName string) {
 
 func (kmakeschedulerun *KmakeScheduleRun) RemoveFinalizer(finalizerName string) {
 	kmakeschedulerun.ObjectMeta.Finalizers = removeString(kmakeschedulerun.ObjectMeta.Finalizers, finalizerName)
+}
+
+func (kmakeschedulerun *KmakeScheduleRun) GetStatus() string {
+	return kmakeschedulerun.Status.Status
 }
 
 // +kubebuilder:object:root=true
