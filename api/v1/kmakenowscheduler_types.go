@@ -89,7 +89,10 @@ func (kmakenowscheduler *KmakeNowScheduler) Variables() []KV {
 
 func (kmakenowscheduler *KmakeNowScheduler) Monitor() []string {
 	return kmakenowscheduler.Spec.Monitor
+}
 
+func (kmakenowscheduler *KmakeNowScheduler) GetStatus() string {
+	return kmakenowscheduler.Status.Status
 }
 
 // +kubebuilder:object:root=true

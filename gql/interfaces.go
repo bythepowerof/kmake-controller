@@ -8,10 +8,12 @@ import (
 type KmakeObject interface {
 	GetName() string
 	GetNamespace() string
+	GetStatus() string
 }
 type KmakeScheduler interface {
 	GetName() string
 	GetNamespace() string
+	GetStatus() string
 	Variables() []v1.KV
 	Monitor() []string
 }

@@ -230,6 +230,10 @@ func (kmakeschedulerun *KmakeScheduleRun) RemoveFinalizer(finalizerName string) 
 	kmakeschedulerun.ObjectMeta.Finalizers = removeString(kmakeschedulerun.ObjectMeta.Finalizers, finalizerName)
 }
 
+func (kmakeschedulerun *KmakeScheduleRun) GetStatus() string {
+	return kmakeschedulerun.Status.Status
+}
+
 // +kubebuilder:object:root=true
 // KmakeScheduleRunList contains a list of KmakeScheduleRun
 type KmakeScheduleRunList struct {

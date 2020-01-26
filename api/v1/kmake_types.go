@@ -59,10 +59,11 @@ const (
 	Wait
 	Stop
 	Restart
+	Ready
 )
 
 func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart"}[d]
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -147,6 +148,10 @@ func (kmake *Kmake) GetSubReference(s SubResource) string {
 		return name
 	}
 	return ""
+}
+
+func (kmake *Kmake) GetStatus() string {
+	return kmake.Status.Status
 }
 
 func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {

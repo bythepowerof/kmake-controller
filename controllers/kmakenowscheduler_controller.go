@@ -249,6 +249,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 	}
 
+	_ = r.Event(instance, bythepowerofv1.Ready, bythepowerofv1.Main, "")
 	return backoff5, nil
 }
 

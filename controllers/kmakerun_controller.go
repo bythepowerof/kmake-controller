@@ -150,6 +150,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	for _, owner := range instance.OwnerReferences {
 		if owner.Kind == "Kmake" {
+			err = r.Event(instance, bythepowerofv1.Ready, bythepowerofv1.Main, "")
 			return ctrl.Result{}, nil
 		}
 	}

@@ -105,6 +105,10 @@ func (kmakerun *KmakeRun) RemoveFinalizer(finalizerName string) {
 	kmakerun.ObjectMeta.Finalizers = removeString(kmakerun.ObjectMeta.Finalizers, finalizerName)
 }
 
+func (kmakerun *KmakeRun) GetStatus() string {
+	return kmakerun.Status.Status
+}
+
 // +kubebuilder:object:root=true
 // KmakeRunList contains a list of KmakeRun
 type KmakeRunList struct {
