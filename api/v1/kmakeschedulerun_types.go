@@ -151,7 +151,7 @@ func (kmsr *KmakeScheduleRun) IsActive() bool {
 }
 
 func (kmsr *KmakeScheduleRun) IsNew() bool {
-	return kmsr.Status.Status == ""
+	return kmsr.Status.Status == "" || kmsr.Status.Status == "Provision Main (finalizer)"
 }
 
 func (kmsr *KmakeScheduleRun) IsScheduled() bool {
