@@ -14,7 +14,7 @@ cache:
   - $HOME/gopath/pkg/mod
 
 before_install:
-- GO111MODULE=on go get sigs.k8s.io/kustomize/kustomize/v3@v3.3.0
+# - GO111MODULE=on go get sigs.k8s.io/kustomize/kustomize/v3@v3.3.0
 - $TRAVIS_BUILD_DIR/install-kb.sh
 - export PATH=$PATH:/usr/local/kubebuilder/bin
 
