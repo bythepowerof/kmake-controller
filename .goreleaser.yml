@@ -6,6 +6,7 @@ before:
     - go mod tidy
     # you may remove this if you don't need go generate
     - go generate ./...
+project_name: manager
 builds:
 - env:
   - CGO_ENABLED=0
@@ -26,3 +27,45 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
+dockers:
+  -
+    # GOOS of the built binary that should be used.
+    goos: linux
+  
+    # GOARCH of the built binary that should be used.
+    goarch: amd64
+  
+    # GOARM of the built binary that should be used.
+    goarm: ''
+  
+    # Name templates of the built binaries that should be used.
+    binaries:
+    - manager
+  
+    # Build IDs to gather the binaries from.
+    builds:
+    - manager
+  
+    # Templates of the Docker image names.
+    image_templates:
+    - "bythepowerof/kmake-controller:latest"
+    - "bythepowerof/kmake-controller:{{ .Tag }}"
+    - "bythepowerof/kmake-controller:v{{ .Major }}"
+  
+    # Skips the docker push. Could be useful if you also do draft releases.
+    # If set to auto, the release will not be pushed to the docker repository
+    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
+    # Defaults to false.
+    skip_push: false
+  
+    # Path to the Dockerfile (from the project root).
+    dockerfile: Dockerfile.travis
+  
+    # Template of the docker build flags.
+    build_flag_templates:
+    - "--pull"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.name={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
+  
