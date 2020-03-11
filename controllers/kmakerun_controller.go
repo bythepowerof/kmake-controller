@@ -64,6 +64,9 @@ func (r *KmakeRunReconciler) Event(instance *bythepowerofv1.KmakeRun, phase byth
 		if err != nil {
 			return err
 		}
+		if instance.Annotations == nil {
+			instance.Annotations = make(map[string]string)
+		}
 		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
