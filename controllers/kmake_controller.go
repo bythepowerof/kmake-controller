@@ -132,7 +132,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.PVC), currentpvc)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.PVC, instance.GetNamespace()), currentpvc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
@@ -196,7 +196,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.EnvMap, instance.GetNamespace()), currentenvmap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
@@ -248,7 +248,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.KmakeMap), currentkmakemap)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.KmakeMap, instance.GetNamespace()), currentkmakemap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))

@@ -21,7 +21,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 type SubResource int
@@ -142,29 +141,8 @@ func (kmake *Kmake) RemoveFinalizer(finalizerName string) {
 	kmake.ObjectMeta.Finalizers = removeString(kmake.ObjectMeta.Finalizers, finalizerName)
 }
 
-func (kmake *Kmake) GetSubReference(s SubResource) string {
-
-	if name, ok := kmake.Status.Resources[s.String()]; ok {
-		return name
-	}
-	return ""
-}
-
 func (kmake *Kmake) GetStatus() string {
 	return kmake.Status.Status
-}
-
-func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if name, ok := kmake.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kmake.GetNamespace(),
-			Name:      name,
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmake.GetNamespace(),
-		Name:      "",
-	}
 }
 
 // +kubebuilder:object:root=true

@@ -17,7 +17,6 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"strings"
 )
 
@@ -156,19 +155,6 @@ func (kmsr *KmakeScheduleRun) IsNew() bool {
 
 func (kmsr *KmakeScheduleRun) IsScheduled() bool {
 	return false
-}
-
-func (kmsr *KmakeScheduleRun) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if _, ok := kmsr.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kmsr.GetNamespace(),
-			Name:      kmsr.Status.Resources[subresource.String()],
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmsr.GetNamespace(),
-		Name:      "",
-	}
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeName() string {

@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"k8s.io/apimachinery/pkg/types"
 	"math/rand"
 	"time"
 )
@@ -76,6 +77,26 @@ func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name strin
 
 func (status *KmakeStatus) NameConcat(subresource SubResource) string {
 	return status.Resources[subresource.String()]
+}
+
+func (status *KmakeStatus) NamespacedNameConcat(subresource SubResource, namespace string) types.NamespacedName {
+	if name, ok := status.Resources[subresource.String()]; ok {
+		return types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		}
+	}
+	return types.NamespacedName{
+		Namespace: namespace,
+		Name:      "",
+	}
+}
+
+func (status *KmakeStatus) GetSubReference(s SubResource) string {
+	if name, ok := status.Resources[s.String()]; ok {
+		return name
+	}
+	return ""
 }
 
 type KmakeRule struct {
