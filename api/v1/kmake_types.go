@@ -72,13 +72,8 @@ func (d Phase) String() string {
 type KmakeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Variables []KmakeVariable `json:"variables,omitempty"`
-	Variables map[string]string `json:"variables,omitempty"`
-	Rules     []KmakeRule       `json:"rules"`
-	// MasterImage string            `json:"master_image"`
-	// JobImage    string            `json:"job_image"`
-	// Folders     []string          `json:"folders,omitempty"`
-
+	Variables                     map[string]string                `json:"variables,omitempty"`
+	Rules                         []KmakeRule                      `json:"rules"`
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 

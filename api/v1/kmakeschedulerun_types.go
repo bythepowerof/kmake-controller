@@ -204,8 +204,8 @@ func (kmsr *KmakeScheduleRun) GetJobName() string {
 
 const KmakeScheduleRunFinalizerName = "kmakeschedulerun.finalizers.bythepowerof.github.com"
 
-func (kmakerun *KmakeScheduleRun) HasFinalizer(finalizerName string) bool {
-	return containsString(kmakerun.ObjectMeta.Finalizers, finalizerName)
+func (kmakeschedulerun *KmakeScheduleRun) HasFinalizer(finalizerName string) bool {
+	return containsString(kmakeschedulerun.ObjectMeta.Finalizers, finalizerName)
 }
 
 func (kmakeschedulerun *KmakeScheduleRun) AddFinalizer(finalizerName string) {

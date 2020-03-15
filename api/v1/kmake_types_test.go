@@ -49,9 +49,7 @@ var _ = Describe("Kmake", func() {
 	// Avoid adding tests for vanilla CRUD operations because they would
 	// test Kubernetes API server, which isn't the goal here.
 	Context("Create API", func() {
-
 		It("should create an object successfully", func() {
-
 			key = types.NamespacedName{
 				Name:      "foo",
 				Namespace: "default",
@@ -68,8 +66,10 @@ var _ = Describe("Kmake", func() {
 					},
 					Rules: []KmakeRule{
 						KmakeRule{
-							Targets:  []string{"Rule1"},
-							Commands: []string{"@echo $@"},
+							Targets:       []string{"Rule1"},
+							TargetPattern: "Rule%",
+							DoubleColon:   true,
+							Commands:      []string{"@echo $@"},
 						},
 						KmakeRule{
 							Targets:  []string{"Rule2"},
@@ -85,6 +85,9 @@ var _ = Describe("Kmake", func() {
 			fetched = &Kmake{}
 			Expect(k8sClient.Get(context.TODO(), key, fetched)).To(Succeed())
 			Expect(fetched).To(Equal(created))
+
+			By("generating a Makefile")
+			Expect(created.Spec.ToMakefile()).To(Equal("Rule1:: Rule%:  \n\t@echo $@\nRule2:  \n\t@echo $@\n"))
 
 			By("deleting the created object")
 			Expect(k8sClient.Delete(context.TODO(), created)).To(Succeed())
