@@ -18,8 +18,8 @@ package v1
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	"math/rand"
-	"time"
+	// "math/rand"
+	// "time"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz"
@@ -43,18 +43,18 @@ func removeString(slice []string, s string) (result []string) {
 	return
 }
 
-func randomStringWithCharset(length int, charset string) string {
-	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
-	}
-	return string(b)
-}
+// func randomStringWithCharset(length int, charset string) string {
+// 	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+// 	b := make([]byte, length)
+// 	for i := range b {
+// 		b[i] = charset[seededRand.Intn(len(charset))]
+// 	}
+// 	return string(b)
+// }
 
-func RandomString(length int) string {
-	return randomStringWithCharset(length, charset)
-}
+// func RandomString(length int) string {
+// 	return randomStringWithCharset(length, charset)
+// }
 
 // KmakeStatus defines the observed state of Kmake things
 type KmakeStatus struct {
