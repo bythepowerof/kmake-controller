@@ -18,8 +18,6 @@ package v1
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	// "math/rand"
-	// "time"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz"
@@ -43,19 +41,6 @@ func removeString(slice []string, s string) (result []string) {
 	return
 }
 
-// func randomStringWithCharset(length int, charset string) string {
-// 	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-// 	b := make([]byte, length)
-// 	for i := range b {
-// 		b[i] = charset[seededRand.Intn(len(charset))]
-// 	}
-// 	return string(b)
-// }
-
-// func RandomString(length int) string {
-// 	return randomStringWithCharset(length, charset)
-// }
-
 // KmakeStatus defines the observed state of Kmake things
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -75,9 +60,9 @@ func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name strin
 	status.Resources[subresource.String()] = name
 }
 
-func (status *KmakeStatus) NameConcat(subresource SubResource) string {
-	return status.Resources[subresource.String()]
-}
+// func (status *KmakeStatus) NameConcat(subresource SubResource) string {
+// 	return status.Resources[subresource.String()]
+// }
 
 func (status *KmakeStatus) NamespacedNameConcat(subresource SubResource, namespace string) types.NamespacedName {
 	if name, ok := status.Resources[subresource.String()]; ok {
