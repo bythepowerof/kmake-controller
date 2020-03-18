@@ -45,7 +45,6 @@ func removeString(slice []string, s string) (result []string) {
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Runs      []*KmakeRuns      `json:"runs,omitempty"`
 	Status    string            `json:"status,omitempty"`
 	Resources map[string]string `json:"resources,omitempty"`
 }
@@ -59,10 +58,6 @@ func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name strin
 	}
 	status.Resources[subresource.String()] = name
 }
-
-// func (status *KmakeStatus) NameConcat(subresource SubResource) string {
-// 	return status.Resources[subresource.String()]
-// }
 
 func (status *KmakeStatus) NamespacedNameConcat(subresource SubResource, namespace string) types.NamespacedName {
 	if name, ok := status.Resources[subresource.String()]; ok {

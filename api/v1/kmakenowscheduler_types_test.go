@@ -63,6 +63,10 @@ var _ = Describe("Kmake", func() {
 				},
 				Spec: KmakeNowSchedulerSpec{
 					Monitor: []string{"now"},
+					Variables: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
 				}}
 
 			By("creating an API obj")
@@ -71,6 +75,15 @@ var _ = Describe("Kmake", func() {
 			fetched = &KmakeNowScheduler{}
 			Expect(k8sClient.Get(context.TODO(), key, fetched)).To(Succeed())
 			Expect(fetched).To(Equal(created))
+
+			By("checking variables")
+			Expect(len(fetched.Variables())).To(Equal(2))
+
+			By("checking monitor field")
+			Expect(fetched.Monitor()).To(Equal([]string{"now"}))
+
+			By("checking status field")
+			Expect(fetched.GetStatus()).To(Equal(""))
 
 			By("deleting the created object")
 			Expect(k8sClient.Delete(context.TODO(), created)).To(Succeed())

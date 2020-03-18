@@ -46,10 +46,6 @@ func (kmns *KmakeNowScheduler) IsBeingDeleted() bool {
 	return !kmns.ObjectMeta.DeletionTimestamp.IsZero()
 }
 
-func (kmns *KmakeNowScheduler) GetSubReference(s SubResource) string {
-	return kmns.Status.Resources[s.String()]
-}
-
 const KmakeNowSchedulerFinalizerName = "kmakenowscheduler.finalizers.bythepowerof.github.com"
 
 func (kmakenowscheduler *KmakeNowScheduler) HasFinalizer(finalizerName string) bool {
