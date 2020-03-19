@@ -89,6 +89,9 @@ var _ = Describe("Kmake", func() {
 			By("generating a Makefile")
 			Expect(created.Spec.ToMakefile()).To(Equal("Rule1:: Rule%:  \n\t@echo $@\nRule2:  \n\t@echo $@\n"))
 
+			By("checking status field")
+			Expect(fetched.GetStatus()).To(Equal(""))
+
 			By("deleting the created object")
 			Expect(k8sClient.Delete(context.TODO(), created)).To(Succeed())
 			Expect(k8sClient.Get(context.TODO(), key, created)).ToNot(Succeed())
@@ -111,6 +114,14 @@ var _ = Describe("Kmake", func() {
 			kmake.RemoveFinalizer(KmakeFinalizerName)
 			Expect(len(kmake.GetFinalizers())).To(Equal(0))
 			Expect(kmake.HasFinalizer(KmakeFinalizerName)).To(BeFalse())
+		})
+
+		It("should decode consts", func() {
+			By("checking subresource field")
+			Expect(Owner.String()).To(Equal("Owner"))
+
+			By("checking subresource field")
+			Expect(Ready.String()).To(Equal("Ready"))
 		})
 	})
 
