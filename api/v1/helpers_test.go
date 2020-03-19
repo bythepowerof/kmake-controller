@@ -84,9 +84,16 @@ var _ = Describe("helpers", func() {
 			Expect(k8sClient.Get(context.TODO(), key, fetched)).To(Succeed())
 			Expect(fetched).To(Equal(created))
 
-			By("updating the status")
+			By("updating the status with value")
 			fetched.Status.UpdateSubResource(Main, "test-value")
 			Expect(fetched.Status.GetSubReference(Main)).To(Equal("test-value"))
+
+			By("updating the status no value")
+			fetched.Status.UpdateSubResource(Owner, "")
+			Expect(fetched.Status.GetSubReference(Owner)).To(Equal(""))
+
+			By("get the status no value")
+			Expect(fetched.Status.GetSubReference(EnvMap)).To(Equal(""))
 
 			By("getting NamespacedNameConcat for defined sub")
 			Expect(fetched.Status.NamespacedNameConcat(Main, "default")).To(Equal(types.NamespacedName{
