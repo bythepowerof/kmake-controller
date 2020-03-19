@@ -23,48 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type SubResource int
-
-const (
-	PVC SubResource = iota
-	EnvMap
-	KmakeMap
-	Main
-	KMAKE
-	Job
-	Runs
-	Schedule
-	SchEnvMap
-	Dummy
-	FileWait
-	Owner
-)
-
-func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner"}[d]
-}
-
-type Phase int
-
-const (
-	Provision Phase = iota
-	Delete
-	BackOff
-	Update
-	Error
-	Active
-	Success
-	Abort
-	Wait
-	Stop
-	Restart
-	Ready
-)
-
-func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
-}
-
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 

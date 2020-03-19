@@ -115,14 +115,6 @@ var _ = Describe("Kmake", func() {
 			Expect(len(kmake.GetFinalizers())).To(Equal(0))
 			Expect(kmake.HasFinalizer(KmakeFinalizerName)).To(BeFalse())
 		})
-
-		It("should decode consts", func() {
-			By("checking subresource field")
-			Expect(Owner.String()).To(Equal("Owner"))
-
-			By("checking subresource field")
-			Expect(Ready.String()).To(Equal("Ready"))
-		})
 	})
 
 })

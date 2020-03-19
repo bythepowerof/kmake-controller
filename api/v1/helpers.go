@@ -22,6 +22,48 @@ import (
 
 const charset = "abcdefghijklmnopqrstuvwxyz"
 
+type SubResource int
+
+const (
+	PVC SubResource = iota
+	EnvMap
+	KmakeMap
+	Main
+	KMAKE
+	Job
+	Runs
+	Schedule
+	SchEnvMap
+	Dummy
+	FileWait
+	Owner
+)
+
+func (d SubResource) String() string {
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner"}[d]
+}
+
+type Phase int
+
+const (
+	Provision Phase = iota
+	Delete
+	BackOff
+	Update
+	Error
+	Active
+	Success
+	Abort
+	Wait
+	Stop
+	Restart
+	Ready
+)
+
+func (d Phase) String() string {
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
+}
+
 func containsString(slice []string, s string) bool {
 	for _, item := range slice {
 		if item == s {

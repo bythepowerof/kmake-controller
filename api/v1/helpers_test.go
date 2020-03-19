@@ -112,6 +112,14 @@ var _ = Describe("helpers", func() {
 			Expect(k8sClient.Get(context.TODO(), key, created)).ToNot(Succeed())
 		})
 
+		It("should decode consts", func() {
+			By("checking subresource field")
+			Expect(Owner.String()).To(Equal("Owner"))
+
+			By("checking Phase field")
+			Expect(Ready.String()).To(Equal("Ready"))
+		})
+
 	})
 
 })
