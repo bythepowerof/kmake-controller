@@ -17,10 +17,12 @@ limitations under the License.
 package v1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz"
+const kmakeDomain = "bythepowerof.github.io/"
 
 type SubResource int
 
@@ -64,6 +66,20 @@ func (d Phase) String() string {
 	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
 }
 
+type Label int
+
+const (
+	KmakeLabel Label = iota
+	StatusLabel
+	RunLabel
+	ScheduleLabel
+	ScheduleEnvLabel
+)
+
+func (d Label) String() string {
+	return [...]string{"kmake", "status", "run", "schedule", "schedule-env"}[d]
+}
+
 func containsString(slice []string, s string) bool {
 	for _, item := range slice {
 		if item == s {
@@ -81,6 +97,31 @@ func removeString(slice []string, s string) (result []string) {
 		result = append(result, item)
 	}
 	return
+}
+
+func makeDomainString(entry string) string {
+	return kmakeDomain + entry
+}
+
+func SetDomainLabel(meta *metav1.ObjectMeta, label Label, value string) bool {
+	if meta.Labels == nil {
+		meta.Labels = make(map[string]string)
+	}
+	domain := makeDomainString(label.String())
+	meta.Labels[domain] = value
+	return meta.Labels[domain] == value
+}
+
+func GetDomainLabel(meta metav1.ObjectMeta, label Label) string {
+	if meta.Labels == nil {
+		return ""
+	}
+	domain := makeDomainString(label.String())
+
+	if val, ok := meta.Labels[domain]; ok {
+		return val
+	}
+	return ""
 }
 
 // KmakeStatus defines the observed state of Kmake things

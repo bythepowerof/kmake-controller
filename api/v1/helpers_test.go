@@ -95,6 +95,12 @@ var _ = Describe("helpers", func() {
 			By("get the status no value")
 			Expect(fetched.Status.GetSubReference(EnvMap)).To(Equal(""))
 
+			By("set a domain label")
+			Expect(SetDomainLabel(&fetched.ObjectMeta, KmakeLabel, "test")).To(Equal(true))
+
+			By("get a domain label")
+			Expect(GetDomainLabel(fetched.ObjectMeta, KmakeLabel)).To(Equal("test"))
+
 			By("getting NamespacedNameConcat for defined sub")
 			Expect(fetched.Status.NamespacedNameConcat(Main, "default")).To(Equal(types.NamespacedName{
 				Name:      "test-value",

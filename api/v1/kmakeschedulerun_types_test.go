@@ -63,7 +63,13 @@ var _ = Describe("Kmake", func() {
 				},
 				Spec: KmakeScheduleRunSpec{
 					KmakeScheduleRunOperation: KmakeScheduleRunOperation{
-						Start: &KmakeScheduleRunStart{},
+						Start:   &KmakeScheduleRunStart{},
+						Restart: &KmakeScheduleRunRestart{},
+						Stop:    &KmakeScheduleRunStop{},
+						Delete:  &KmakeScheduleDelete{},
+						Create:  &KmakeScheduleCreate{},
+						Reset:   &KmakeScheduleReset{},
+						Force:   &KmakeScheduleForce{},
 					},
 				},
 			}
@@ -74,6 +80,31 @@ var _ = Describe("Kmake", func() {
 			fetched = &KmakeScheduleRun{}
 			Expect(k8sClient.Get(context.TODO(), key, fetched)).To(Succeed())
 			Expect(fetched).To(Equal(created))
+
+			By("checking status field")
+			Expect(fetched.GetStatus()).To(Equal(""))
+
+			By("checking dummy function")
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Start.Dummy()).To(Equal("KmakeScheduleRunStart"))
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Restart.Dummy()).To(Equal("KmakeScheduleRunRestart"))
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Stop.Dummy()).To(Equal("KmakeScheduleRunStop"))
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Delete.Dummy()).To(Equal("KmakeScheduleDelete"))
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Create.Dummy()).To(Equal("KmakeScheduleCreate"))
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Reset.Dummy()).To(Equal("KmakeScheduleReset"))
+			Expect(fetched.Spec.KmakeScheduleRunOperation.Force.Dummy()).To(Equal("KmakeScheduleForce"))
+
+			By("checking status logic")
+			Expect(fetched.HasEnded()).To(Equal(false))
+			Expect(fetched.IsActive()).To(Equal(false))
+			Expect(fetched.IsNew()).To(Equal(true))
+			Expect(fetched.IsScheduled()).To(Equal(false))
+
+			By("checking references")
+			Expect(fetched.GetKmakeName()).To(Equal(""))
+			Expect(fetched.GetKmakeRunName()).To(Equal(""))
+			Expect(fetched.GetKmakeScheduleName()).To(Equal(""))
+			Expect(fetched.GetKmakeScheduleEnvName()).To(Equal(""))
+			Expect(fetched.GetJobName()).To(Equal(""))
 
 			By("deleting the created object")
 			Expect(k8sClient.Delete(context.TODO(), created)).To(Succeed())
