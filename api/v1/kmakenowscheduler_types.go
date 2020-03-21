@@ -17,7 +17,6 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -45,23 +44,6 @@ type KmakeNowScheduler struct {
 
 func (kmns *KmakeNowScheduler) IsBeingDeleted() bool {
 	return !kmns.ObjectMeta.DeletionTimestamp.IsZero()
-}
-
-func (kmns *KmakeNowScheduler) GetSubReference(s SubResource) string {
-	return kmns.Status.Resources[s.String()]
-}
-
-func (kmns *KmakeNowScheduler) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if _, ok := kmns.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kmns.GetNamespace(),
-			Name:      kmns.Status.Resources[subresource.String()],
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmns.GetNamespace(),
-		Name:      "",
-	}
 }
 
 const KmakeNowSchedulerFinalizerName = "kmakenowscheduler.finalizers.bythepowerof.github.com"

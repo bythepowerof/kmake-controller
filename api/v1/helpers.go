@@ -17,11 +17,68 @@ limitations under the License.
 package v1
 
 import (
-	"math/rand"
-	"time"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz"
+const kmakeDomain = "bythepowerof.github.io/"
+
+type SubResource int
+
+const (
+	PVC SubResource = iota
+	EnvMap
+	KmakeMap
+	Main
+	KMAKE
+	Job
+	Runs
+	Schedule
+	SchEnvMap
+	Dummy
+	FileWait
+	Owner
+)
+
+func (d SubResource) String() string {
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner"}[d]
+}
+
+type Phase int
+
+const (
+	Provision Phase = iota
+	Delete
+	BackOff
+	Update
+	Error
+	Active
+	Success
+	Abort
+	Wait
+	Stop
+	Restart
+	Ready
+)
+
+func (d Phase) String() string {
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
+}
+
+type Label int
+
+const (
+	KmakeLabel Label = iota
+	StatusLabel
+	RunLabel
+	ScheduleLabel
+	ScheduleEnvLabel
+)
+
+func (d Label) String() string {
+	return [...]string{"kmake", "status", "run", "schedule", "schedule-env"}[d]
+}
 
 func containsString(slice []string, s string) bool {
 	for _, item := range slice {
@@ -42,24 +99,35 @@ func removeString(slice []string, s string) (result []string) {
 	return
 }
 
-func randomStringWithCharset(length int, charset string) string {
-	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
-	}
-	return string(b)
+func makeDomainString(entry string) string {
+	return kmakeDomain + entry
 }
 
-func RandomString(length int) string {
-	return randomStringWithCharset(length, charset)
+func SetDomainLabel(meta *metav1.ObjectMeta, label Label, value string) bool {
+	if meta.Labels == nil {
+		meta.Labels = make(map[string]string)
+	}
+	domain := makeDomainString(label.String())
+	meta.Labels[domain] = value
+	return meta.Labels[domain] == value
+}
+
+func GetDomainLabel(meta metav1.ObjectMeta, label Label) string {
+	if meta.Labels == nil {
+		return ""
+	}
+	domain := makeDomainString(label.String())
+
+	if val, ok := meta.Labels[domain]; ok {
+		return val
+	}
+	return ""
 }
 
 // KmakeStatus defines the observed state of Kmake things
 type KmakeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Runs      []*KmakeRuns      `json:"runs,omitempty"`
 	Status    string            `json:"status,omitempty"`
 	Resources map[string]string `json:"resources,omitempty"`
 }
@@ -74,8 +142,24 @@ func (status *KmakeStatus) UpdateSubResource(subresource SubResource, name strin
 	status.Resources[subresource.String()] = name
 }
 
-func (status *KmakeStatus) NameConcat(subresource SubResource) string {
-	return status.Resources[subresource.String()]
+func (status *KmakeStatus) NamespacedNameConcat(subresource SubResource, namespace string) types.NamespacedName {
+	if name, ok := status.Resources[subresource.String()]; ok {
+		return types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		}
+	}
+	return types.NamespacedName{
+		Namespace: namespace,
+		Name:      "",
+	}
+}
+
+func (status *KmakeStatus) GetSubReference(s SubResource) string {
+	if name, ok := status.Resources[s.String()]; ok {
+		return name
+	}
+	return ""
 }
 
 type KmakeRule struct {

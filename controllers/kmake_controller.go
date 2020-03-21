@@ -130,12 +130,12 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	ctrl.SetControllerReference(instance, requiredpvc, r.Scheme)
 
-	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
+	log.Info(fmt.Sprintf("Checking pvc %v", instance.Status.GetSubReference(bythepowerofv1.PVC)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.PVC), currentpvc)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.PVC, instance.GetNamespace()), currentpvc)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
+			log.Info(fmt.Sprintf("Not found pvc %v", instance.Status.GetSubReference(bythepowerofv1.PVC)))
 
 			// create it
 			err = r.Create(ctx, requiredpvc)
@@ -155,7 +155,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(equality.Semantic.DeepEqual(currentpvc.Spec.Resources, requiredpvc.Spec.Resources) &&
 		equality.Semantic.DeepEqual(currentpvc.ObjectMeta.Labels, requiredpvc.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete/recreate pvc %v", instance.Status.NameConcat(bythepowerofv1.PVC)))
+		log.Info(fmt.Sprintf("delete/recreate pvc %v", instance.Status.GetSubReference(bythepowerofv1.PVC)))
 
 		err = r.Delete(ctx, currentpvc)
 		if err != nil {
@@ -194,12 +194,12 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
 
-	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.EnvMap, instance.GetNamespace()), currentenvmap)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
 
 			// create it
 			err = r.Create(ctx, requiredenvmap)
@@ -217,7 +217,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(equality.Semantic.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
 		equality.Semantic.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+		log.Info(fmt.Sprintf("delete env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
 		err = r.Delete(ctx, currentenvmap)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -246,12 +246,12 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	ctrl.SetControllerReference(instance, requiredkmakemap, r.Scheme)
 
-	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
+	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.KmakeMap), currentkmakemap)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.KmakeMap, instance.GetNamespace()), currentkmakemap)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
+			log.Info(fmt.Sprintf("Not found kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
 
 			// create it
 			err = r.Create(ctx, requiredkmakemap)
@@ -268,7 +268,7 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if !(equality.Semantic.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
 		equality.Semantic.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete kmake map %v", instance.Status.NameConcat(bythepowerofv1.KmakeMap)))
+		log.Info(fmt.Sprintf("delete kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
 		err = r.Delete(ctx, currentkmakemap)
 		if err != nil {
 			return reconcile.Result{}, err

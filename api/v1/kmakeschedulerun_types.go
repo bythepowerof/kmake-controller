@@ -17,7 +17,6 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"strings"
 )
 
@@ -134,20 +133,16 @@ func (kmsr *KmakeScheduleRun) IsBeingDeleted() bool {
 }
 
 func (kmsr *KmakeScheduleRun) HasEnded() bool {
-	if val, ok := kmsr.Labels["bythepowerof.github.io/status"]; ok {
-		return strings.Contains(val, "Success") ||
-			strings.Contains(val, "Error") ||
-			strings.Contains(val, "Abort")
-	}
-	return false
+	val := GetDomainLabel(kmsr.ObjectMeta, StatusLabel)
+	return strings.Contains(val, "Success") ||
+		strings.Contains(val, "Error") ||
+		strings.Contains(val, "Abort")
 }
 
 func (kmsr *KmakeScheduleRun) IsActive() bool {
-	if val, ok := kmsr.Labels["bythepowerof.github.io/status"]; ok {
-		return strings.Contains(val, "Provision") ||
-			strings.Contains(val, "Active")
-	}
-	return true
+	val := GetDomainLabel(kmsr.ObjectMeta, StatusLabel)
+	return strings.Contains(val, "Provision") ||
+		strings.Contains(val, "Active")
 }
 
 func (kmsr *KmakeScheduleRun) IsNew() bool {
@@ -158,68 +153,30 @@ func (kmsr *KmakeScheduleRun) IsScheduled() bool {
 	return false
 }
 
-func (kmsr *KmakeScheduleRun) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if _, ok := kmsr.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kmsr.GetNamespace(),
-			Name:      kmsr.Status.Resources[subresource.String()],
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmsr.GetNamespace(),
-		Name:      "",
-	}
-}
-
 func (kmsr *KmakeScheduleRun) GetKmakeName() string {
-	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/kmake"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
+	return GetDomainLabel(kmsr.ObjectMeta, KmakeLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeRunName() string {
-	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/run"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
+	return GetDomainLabel(kmsr.ObjectMeta, RunLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeScheduleName() string {
-	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/schedule"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
+	return GetDomainLabel(kmsr.ObjectMeta, ScheduleLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeScheduleEnvName() string {
-	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/schedule-env"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
+	return GetDomainLabel(kmsr.ObjectMeta, ScheduleEnvLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetJobName() string {
-	value, ok := kmsr.Status.Resources["Job"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
+	return kmsr.Status.GetSubReference(Job)
 }
 
 const KmakeScheduleRunFinalizerName = "kmakeschedulerun.finalizers.bythepowerof.github.com"
 
-func (kmakerun *KmakeScheduleRun) HasFinalizer(finalizerName string) bool {
-	return containsString(kmakerun.ObjectMeta.Finalizers, finalizerName)
+func (kmakeschedulerun *KmakeScheduleRun) HasFinalizer(finalizerName string) bool {
+	return containsString(kmakeschedulerun.ObjectMeta.Finalizers, finalizerName)
 }
 
 func (kmakeschedulerun *KmakeScheduleRun) AddFinalizer(finalizerName string) {

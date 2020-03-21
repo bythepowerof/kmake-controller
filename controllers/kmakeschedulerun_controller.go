@@ -171,12 +171,12 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			if instance.IsActive() {
 				// check the job
 				currentjob := &v1.Job{}
-				err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.Job), currentjob)
+				err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.Job, instance.GetNamespace()), currentjob)
 
 				if err != nil {
 					if errors.IsNotFound(err) {
 						// make sure someone hasn't delete the Job
-						if instance.NamespacedNameConcat(bythepowerofv1.Job).Name != "" {
+						if instance.Status.NamespacedNameConcat(bythepowerofv1.Job, instance.GetNamespace()).Name != "" {
 							r.Event(instance, bythepowerofv1.Abort, bythepowerofv1.Job, currentjob.GetName())
 							return reconcile.Result{}, nil
 						}
@@ -215,7 +215,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				}
 				return ctrl.Result{}, err
 			}
-			pvcName := kmake.GetSubReference(bythepowerofv1.PVC)
+			pvcName := kmake.Status.GetSubReference(bythepowerofv1.PVC)
 			if pvcName == "" {
 				log.Info(fmt.Sprintf("Not found kmake PVC %v", kmakename))
 				r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.PVC, kmakename)
@@ -260,24 +260,24 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
 					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
 						MountPath: "/usr/share/env",
-						Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
+						Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
 					}
 				} else {
 					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 						requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
 						corev1.VolumeMount{
 							MountPath: "/usr/share/env",
-							Name:      kmake.GetSubReference(bythepowerofv1.EnvMap),
+							Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
 						})
 				}
 
 				if requiredjob.Spec.Template.Spec.Volumes == nil {
 					requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
 					requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
-						Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
+						Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
 							},
 						},
 					}
@@ -285,10 +285,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					requiredjob.Spec.Template.Spec.Volumes = append(
 						requiredjob.Spec.Template.Spec.Volumes,
 						corev1.Volume{
-							Name: kmake.GetSubReference(bythepowerofv1.EnvMap),
+							Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+									LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
 								},
 							},
 						})
@@ -298,7 +298,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
 					corev1.EnvFromSource{
 						ConfigMapRef: &corev1.ConfigMapEnvSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.EnvMap)},
+							LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
 						},
 					})
 
@@ -340,10 +340,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				requiredjob.Spec.Template.Spec.Volumes = append(
 					requiredjob.Spec.Template.Spec.Volumes,
 					corev1.Volume{
-						Name: kmake.GetSubReference(bythepowerofv1.PVC),
+						Name: kmake.Status.GetSubReference(bythepowerofv1.PVC),
 						VolumeSource: corev1.VolumeSource{
 							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: kmake.GetSubReference(bythepowerofv1.PVC),
+								ClaimName: kmake.Status.GetSubReference(bythepowerofv1.PVC),
 								ReadOnly:  false,
 							},
 						},
@@ -354,16 +354,16 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
 					corev1.VolumeMount{
 						MountPath: "/usr/share/kmake",
-						Name:      kmake.GetSubReference(bythepowerofv1.KmakeMap),
+						Name:      kmake.Status.GetSubReference(bythepowerofv1.KmakeMap),
 					})
 
 				requiredjob.Spec.Template.Spec.Volumes = append(
 					requiredjob.Spec.Template.Spec.Volumes,
 					corev1.Volume{
-						Name: kmake.GetSubReference(bythepowerofv1.KmakeMap),
+						Name: kmake.Status.GetSubReference(bythepowerofv1.KmakeMap),
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.GetSubReference(bythepowerofv1.KmakeMap)},
+								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.KmakeMap)},
 							},
 						},
 					})

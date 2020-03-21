@@ -179,8 +179,7 @@ spec:
               additionalProperties:
                 type: string
               description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "make" to regenerate code after modifying this file
-                Variables []KmakeVariable `json:"variables,omitempty"`'
+                Important: Run "make" to regenerate code after modifying this file'
               type: object
           required:
           - persistent_volume_claim_template
@@ -196,7 +195,7 @@ spec:
             status:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
-                this file Runs      []*KmakeRuns      `json:"runs,omitempty"`'
+                this file'
               type: string
           type: object
       type: object

@@ -21,50 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
-
-type SubResource int
-
-const (
-	PVC SubResource = iota
-	EnvMap
-	KmakeMap
-	Main
-	KMAKE
-	Job
-	Runs
-	Schedule
-	SchEnvMap
-	Dummy
-	FileWait
-	Owner
-)
-
-func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner"}[d]
-}
-
-type Phase int
-
-const (
-	Provision Phase = iota
-	Delete
-	BackOff
-	Update
-	Error
-	Active
-	Success
-	Abort
-	Wait
-	Stop
-	Restart
-	Ready
-)
-
-func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
-}
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -73,13 +30,8 @@ func (d Phase) String() string {
 type KmakeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	// Variables []KmakeVariable `json:"variables,omitempty"`
-	Variables map[string]string `json:"variables,omitempty"`
-	Rules     []KmakeRule       `json:"rules"`
-	// MasterImage string            `json:"master_image"`
-	// JobImage    string            `json:"job_image"`
-	// Folders     []string          `json:"folders,omitempty"`
-
+	Variables                     map[string]string                `json:"variables,omitempty"`
+	Rules                         []KmakeRule                      `json:"rules"`
 	PersistentVolumeClaimTemplate corev1.PersistentVolumeClaimSpec `json:"persistent_volume_claim_template"`
 }
 
@@ -142,29 +94,8 @@ func (kmake *Kmake) RemoveFinalizer(finalizerName string) {
 	kmake.ObjectMeta.Finalizers = removeString(kmake.ObjectMeta.Finalizers, finalizerName)
 }
 
-func (kmake *Kmake) GetSubReference(s SubResource) string {
-
-	if name, ok := kmake.Status.Resources[s.String()]; ok {
-		return name
-	}
-	return ""
-}
-
 func (kmake *Kmake) GetStatus() string {
 	return kmake.Status.Status
-}
-
-func (kmake *Kmake) NamespacedNameConcat(subresource SubResource) types.NamespacedName {
-	if name, ok := kmake.Status.Resources[subresource.String()]; ok {
-		return types.NamespacedName{
-			Namespace: kmake.GetNamespace(),
-			Name:      name,
-		}
-	}
-	return types.NamespacedName{
-		Namespace: kmake.GetNamespace(),
-		Name:      "",
-	}
 }
 
 // +kubebuilder:object:root=true

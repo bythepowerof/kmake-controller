@@ -132,12 +132,12 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		Data: instance.Spec.Variables,
 	}
 	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
-	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
 
-	err = r.Get(ctx, instance.NamespacedNameConcat(bythepowerofv1.EnvMap), currentenvmap)
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.EnvMap, instance.GetNamespace()), currentenvmap)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
 
 			// create it
 			err = r.Create(ctx, requiredenvmap)
@@ -155,7 +155,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 	if !(equality.Semantic.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
 		equality.Semantic.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete env map %v", instance.Status.NameConcat(bythepowerofv1.EnvMap)))
+		log.Info(fmt.Sprintf("delete env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
 		err = r.Delete(ctx, currentenvmap)
 		if err != nil {
 			return reconcile.Result{}, err
