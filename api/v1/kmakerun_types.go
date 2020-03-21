@@ -78,17 +78,12 @@ type KmakeRun struct {
 	Status KmakeStatus  `json:"status,omitempty"`
 }
 
-func (kmake *KmakeRun) IsBeingDeleted() bool {
-	return !kmake.ObjectMeta.DeletionTimestamp.IsZero()
+func (kmakerun *KmakeRun) IsBeingDeleted() bool {
+	return !kmakerun.ObjectMeta.DeletionTimestamp.IsZero()
 }
 
-func (kmsr *KmakeRun) GetKmakeName() string {
-	value, ok := kmsr.ObjectMeta.Labels["bythepowerof.github.io/kmake"]
-	if ok {
-		return value
-	} else {
-		return ""
-	}
+func (kmakerun *KmakeRun) GetKmakeName() string {
+	return GetDomainLabel(kmakerun.ObjectMeta, KmakeLabel)
 }
 
 const KmakeRunFinalizerName = "kmakerun.finalizers.bythepowerof.github.com"
