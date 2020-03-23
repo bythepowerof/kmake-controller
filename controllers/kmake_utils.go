@@ -19,19 +19,21 @@ import (
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"strings"
 
+	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
-func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix string, kind string) metav1.ObjectMeta {
+func ObjectMetaConcat(owner metav1.Object, namespacedName types.NamespacedName, suffix bythepowerofv1.SubResource) metav1.ObjectMeta {
 
 	// isController := true
 	return metav1.ObjectMeta{
 		Namespace:    namespacedName.Namespace,
-		GenerateName: namespacedName.Name + "-" + suffix + "-",
+		GenerateName: namespacedName.Name + "-" + strings.ToLower(suffix.String()) + "-",
 		Labels:       owner.GetLabels(),
 	}
 }

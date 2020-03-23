@@ -5,7 +5,7 @@ kind: Kustomization
 images:
 - name: controller
   newName: bythepowerof/kmake-controller
-  newTag: latest
+  newTag: v0.1.9
 configMapGenerator:
 - literals:
   - ENABLE_LEADER_ELECTION=true

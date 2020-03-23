@@ -127,7 +127,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	currentenvmap := &corev1.ConfigMap{}
 	requiredenvmap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env", "KmakeNowScheduler"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.EnvMap),
 
 		Data: instance.Spec.Variables,
 	}
@@ -213,7 +213,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 				if !found {
 					kmsr := &bythepowerofv1.KmakeScheduleRun{
-						ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmsr", "KmakeNowScheduler"),
+						ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.ScheduleRun),
 						Spec: bythepowerofv1.KmakeScheduleRunSpec{
 							KmakeScheduleRunOperation: bythepowerofv1.KmakeScheduleRunOperation{
 								Start: &bythepowerofv1.KmakeScheduleRunStart{},
@@ -236,7 +236,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					if err != nil {
 						return reconcile.Result{}, err
 					}
-					err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Runs, "")
+					err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Runs, kmsr.GetName())
 					if err != nil {
 						return reconcile.Result{}, err
 					}

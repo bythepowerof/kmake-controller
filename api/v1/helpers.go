@@ -39,10 +39,11 @@ const (
 	Dummy
 	FileWait
 	Owner
+	ScheduleRun
 )
 
 func (d SubResource) String() string {
-	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner"}[d]
+	return [...]string{"PVC", "EnvMap", "KmakeMap", "Main", "Kmake", "Job", "Runs", "Schedule", "SchEnvMap", "Dummy", "FileWait", "Owner", "Kmsr"}[d]
 }
 
 type Phase int
@@ -60,10 +61,11 @@ const (
 	Stop
 	Restart
 	Ready
+	Get
 )
 
 func (d Phase) String() string {
-	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready"}[d]
+	return [...]string{"Provision", "Delete", "BackOff", "Update", "Error", "Active", "Success", "Abort", "Wait", "Stop", "Restart", "Ready", "Get"}[d]
 }
 
 type Label int

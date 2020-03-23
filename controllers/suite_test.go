@@ -16,6 +16,7 @@ limitations under the License.
 package controllers
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -23,8 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,7 +41,9 @@ import (
 
 var cfg *rest.Config
 var k8sClient client.Client
+var k8sManager ctrl.Manager
 var testEnv *envtest.Environment
+var scheme = runtime.NewScheme()
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -51,8 +57,15 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
 	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+	t := true
+	if os.Getenv("TEST_USE_EXISTING_CLUSTER") == "true" {
+		testEnv = &envtest.Environment{
+			UseExistingCluster: &t,
+		}
+	} else {
+		testEnv = &envtest.Environment{
+			CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+		}
 	}
 
 	var err error
@@ -60,13 +73,59 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = bythepowerofv1.AddToScheme(scheme.Scheme)
+	err = clientgoscheme.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	// +kubebuilder:scaffold:scheme
+	err = bythepowerofv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	namespace := "default"
+
+	// +kubebuilder:scaffold:scheme
+	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:    scheme,
+		Namespace: namespace,
+	})
 	Expect(err).ToNot(HaveOccurred())
+
+	err = (&KmakeReconciler{
+		Client:   k8sManager.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("kmake").WithName(namespace),
+		Recorder: k8sManager.GetEventRecorderFor("kmake-controller"),
+		Scheme:   scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&KmakeNowSchedulerReconciler{
+		Client:   k8sManager.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeNowScheduler").WithName(namespace),
+		Recorder: k8sManager.GetEventRecorderFor("kmake-now-scheduler-controller"),
+		Scheme:   scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&KmakeScheduleRunReconciler{
+		Client:   k8sManager.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeScheduleRun").WithName(namespace),
+		Recorder: k8sManager.GetEventRecorderFor("kmake-schedule-run-controller"),
+		Scheme:   scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&KmakeRunReconciler{
+		Client:   k8sManager.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("KmakeRun").WithName(namespace),
+		Recorder: k8sManager.GetEventRecorderFor("kmake-run-controller"),
+		Scheme:   scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		Expect(err).ToNot(HaveOccurred())
+	}()
+
+	k8sClient = k8sManager.GetClient()
 	Expect(k8sClient).ToNot(BeNil())
 
 	close(done)

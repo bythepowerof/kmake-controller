@@ -19,7 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
+	// "time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -81,7 +81,7 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("kmakerun", req.NamespacedName)
 
 	// requeue := ctrl.Result{Requeue: true}
-	backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
+	// backoff5 := ctrl.Result{RequeueAfter: time.Until(time.Now().Add(1 * time.Minute))}
 
 	log.Info(fmt.Sprintf("Starting reconcile loop for %v", req.NamespacedName))
 	defer log.Info(fmt.Sprintf("Finish reconcile loop for %v", req.NamespacedName))
@@ -96,31 +96,6 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
-	if instance.IsBeingDeleted() {
-		err = r.handleFinalizer(instance)
-		if err != nil {
-			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
-			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
-		}
-		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
-
-	if !instance.HasFinalizer(bythepowerofv1.KmakeRunFinalizerName) {
-		err = r.addFinalizer(instance)
-		if err != nil {
-			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
-
-			return reconcile.Result{}, fmt.Errorf("error when handling kmakerun finalizer: %v", err)
-		}
-		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
-
-		return ctrl.Result{}, nil
-	}
-
 	kmakename := instance.GetKmakeName()
 	kmake := &bythepowerofv1.Kmake{}
 
@@ -133,8 +108,6 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if errors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("Not found kmake %v", kmakename))
 			r.Event(instance, bythepowerofv1.BackOff, bythepowerofv1.KMAKE, kmakename)
-			// wait for kmake
-			return backoff5, nil
 		}
 		return ctrl.Result{}, err
 	}
