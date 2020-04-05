@@ -5,7 +5,7 @@ set -e
 if [[ ! -d /usr/local/kubebuilder ]];then
 	os=$(go env GOOS)
 	arch=$(go env GOARCH)
-	version=2.2.0
+	version=2.3.1
 
 	if [[ ! -d ~/tmp/kubebuilder/kubebuilder_${version}_${os}_${arch} ]];then
 
