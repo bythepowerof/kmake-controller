@@ -71,6 +71,9 @@ func (r *KmakeScheduleRunReconciler) Event(instance *bythepowerofv1.KmakeSchedul
 		if instance.Annotations == nil {
 			instance.Annotations = make(map[string]string)
 		}
+		if instance.Labels == nil {
+			instance.Labels = make(map[string]string)
+		}
 		instance.Labels["bythepowerof.github.io/status"] = phase.String()
 		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
@@ -227,7 +230,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			if run.Spec.KmakeRunOperation.Job != nil {
 				// build the pod
 				requiredjob := &v1.Job{
-					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "job", "KMSR"),
+					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.Job),
 				}
 
 				requiredjob.Labels["bythepowerof.github.io/schedulerun"] = instance.GetName()
@@ -376,7 +379,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				kms, err := yaml.Marshal(NewOwnerReferencePatch(instance, r.Scheme))
 
 				ownerconfigmap := &corev1.ConfigMap{
-					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "owner", "owner"),
+					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.Owner),
 					Data: map[string]string{
 						"owner.yaml":                         string(y),
 						"owner.json":                         string(j),

@@ -68,6 +68,9 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 		if err != nil {
 			return err
 		}
+		if instance.Annotations == nil {
+			instance.Annotations = make(map[string]string)
+		}
 		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
@@ -95,13 +98,14 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
+		r.Event(instance, bythepowerofv1.Get, bythepowerofv1.Main, fmt.Sprintf("get error: %s", err.Error()))
 		return reconcile.Result{}, err
 	}
 
 	if instance.IsBeingDeleted() {
 		err = r.handleFinalizer(instance)
 		if err != nil {
-			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
+			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, fmt.Sprintf("finlizer: %s", err.Error()))
 			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
 		}
 		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
@@ -121,10 +125,106 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
+	// env configmap
+
+	currentenvmap := &corev1.ConfigMap{}
+	requiredenvmap := &corev1.ConfigMap{
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.EnvMap),
+		Data:       instance.Spec.Variables,
+	}
+
+	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
+
+	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
+
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.EnvMap, instance.GetNamespace()), currentenvmap)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
+
+			// create it
+			err = r.Create(ctx, requiredenvmap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			return requeue, err
+
+		}
+		return reconcile.Result{}, err
+	}
+	if !(equality.Semantic.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
+		equality.Semantic.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
+		log.Info(fmt.Sprintf("delete env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
+		err = r.Delete(ctx, currentenvmap)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return requeue, nil
+	}
+
+	// make yaml config map
+
+	j, err := json.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
+	y, err := yaml.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
+	m, err := instance.Spec.ToMakefile()
+
+	currentkmakemap := &corev1.ConfigMap{}
+	requiredkmakemap := &corev1.ConfigMap{
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.KmakeMap),
+		Data: map[string]string{
+			"kmake.yaml": string(y),
+			"kmake.mk":   m,
+			"kmake.json": string(j)},
+	}
+
+	ctrl.SetControllerReference(instance, requiredkmakemap, r.Scheme)
+
+	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
+
+	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.KmakeMap, instance.GetNamespace()), currentkmakemap)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("Not found kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
+
+			// create it
+			err = r.Create(ctx, requiredkmakemap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			return requeue, err
+		}
+		return reconcile.Result{}, err
+	}
+	if !(equality.Semantic.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
+		equality.Semantic.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
+		log.Info(fmt.Sprintf("delete kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
+		err = r.Delete(ctx, currentkmakemap)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return requeue, nil
+	}
+
 	// PVC
 	currentpvc := &corev1.PersistentVolumeClaim{}
 	requiredpvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "pvc", "Kmake"),
+		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.PVC),
 		Spec:       instance.Spec.PersistentVolumeClaimTemplate,
 	}
 
@@ -184,101 +284,6 @@ func (r *KmakeReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	// env configmap
-
-	currentenvmap := &corev1.ConfigMap{}
-	requiredenvmap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "env", "Kmake"),
-		Data:       instance.Spec.Variables,
-	}
-
-	ctrl.SetControllerReference(instance, requiredenvmap, r.Scheme)
-
-	log.Info(fmt.Sprintf("Checking env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
-
-	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.EnvMap, instance.GetNamespace()), currentenvmap)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
-
-			// create it
-			err = r.Create(ctx, requiredenvmap)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			return requeue, err
-
-		}
-		return reconcile.Result{}, err
-	}
-	if !(equality.Semantic.DeepEqual(currentenvmap.Data, requiredenvmap.Data) &&
-		equality.Semantic.DeepEqual(currentenvmap.ObjectMeta.Labels, requiredenvmap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete env map %v", instance.Status.GetSubReference(bythepowerofv1.EnvMap)))
-		err = r.Delete(ctx, currentenvmap)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.EnvMap, "")
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		return requeue, nil
-	}
-
-	// make yaml config map
-
-	j, err := json.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
-	y, err := yaml.Marshal(map[string][]bythepowerofv1.KmakeRule{"rules": instance.Spec.Rules})
-	m, err := instance.Spec.ToMakefile()
-
-	currentkmakemap := &corev1.ConfigMap{}
-	requiredkmakemap := &corev1.ConfigMap{
-		ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, "kmake", "Kmake"),
-		Data: map[string]string{
-			"kmake.yaml": string(y),
-			"kmake.mk":   m,
-			"kmake.json": string(j)},
-	}
-
-	ctrl.SetControllerReference(instance, requiredkmakemap, r.Scheme)
-
-	log.Info(fmt.Sprintf("Checking kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
-
-	err = r.Get(ctx, instance.Status.NamespacedNameConcat(bythepowerofv1.KmakeMap, instance.GetNamespace()), currentkmakemap)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Not found kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
-
-			// create it
-			err = r.Create(ctx, requiredkmakemap)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.KmakeMap, requiredkmakemap.ObjectMeta.Name)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			return requeue, err
-		}
-		return reconcile.Result{}, err
-	}
-	if !(equality.Semantic.DeepEqual(currentkmakemap.Data, requiredkmakemap.Data) &&
-		equality.Semantic.DeepEqual(currentkmakemap.ObjectMeta.Labels, requiredkmakemap.ObjectMeta.Labels)) {
-		log.Info(fmt.Sprintf("delete kmake map %v", instance.Status.GetSubReference(bythepowerofv1.KmakeMap)))
-		err = r.Delete(ctx, currentkmakemap)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.KmakeMap, "")
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		return requeue, nil
-	}
 	// return requeue, nil
 	err = r.Event(instance, bythepowerofv1.Ready, bythepowerofv1.Main, "")
 
