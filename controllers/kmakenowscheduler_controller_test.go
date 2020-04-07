@@ -219,23 +219,23 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 			Expect(k8sClient.Get(context.Background(), key4, f4)).Should(Succeed())
 			Expect(k8sClient.Delete(context.Background(), f4)).Should(Succeed())
 
-			By("delete kmake")
-			key2 := types.NamespacedName{
-				Name:      kmakename,
-				Namespace: namespace,
-			}
-			f2 := &bythepowerofv1.Kmake{}
-			Expect(k8sClient.Get(context.Background(), key2, f2)).Should(Succeed())
-			Expect(k8sClient.Delete(context.Background(), f2)).Should(Succeed())
+			// By("delete kmake")
+			// key2 := types.NamespacedName{
+			// 	Name:      kmakename,
+			// 	Namespace: namespace,
+			// }
+			// f2 := &bythepowerofv1.Kmake{}
+			// Expect(k8sClient.Get(context.Background(), key2, f2)).Should(Succeed())
+			// Expect(k8sClient.Delete(context.Background(), f2)).Should(Succeed())
 
-			By("delete kmsr")
-			key3 := types.NamespacedName{
-				Name:      kmsrName,
-				Namespace: namespace,
-			}
-			f3 := &bythepowerofv1.KmakeScheduleRun{}
+			// By("delete kmsr")
+			// key3 := types.NamespacedName{
+			// 	Name:      kmsrName,
+			// 	Namespace: namespace,
+			// }
+			// f3 := &bythepowerofv1.KmakeScheduleRun{}
 			// deleting the sheduler should delete this
-			Expect(k8sClient.Get(context.Background(), key3, f3)).ShouldNot(Succeed())
+			// Expect(k8sClient.Get(context.Background(), key3, f3)).ShouldNot(Succeed())
 			// Expect(k8sClient.Delete(context.Background(), f3)).Should(Succeed())
 		})
 	})
