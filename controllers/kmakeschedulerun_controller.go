@@ -466,8 +466,11 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					return reconcile.Result{}, err
 
 				}
-				err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
-				return reconcile.Result{}, err
+				// We can't do this as it will have been deleted if its a full reset!
+				// err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
+				// return reconcile.Result{}, err
+				return reconcile.Result{}, nil
+
 			}
 		case "stop":
 			if instance.IsNew() {
