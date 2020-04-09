@@ -241,6 +241,8 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 			}, timeout, interval).ShouldNot(Succeed())
 		})
 
+		kmsrMeta.Labels["bythepowerof.github.io/workload"] = "no"
+
 		It("Should create restart successfully", func() {
 			By("Create kmake schedule run")
 
@@ -261,6 +263,31 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 			time.Sleep(time.Second * 5)
 
 			f := &bythepowerofv1.KmakeScheduleRun{}
+			// The restart should clear out this kmsr
+
+			Expect(k8sClient.Get(context.Background(), key, f)).ShouldNot(Succeed())
+		})
+
+		It("Should create stop successfully", func() {
+			By("Create kmake schedule run")
+
+			kmsr := &bythepowerofv1.KmakeScheduleRun{
+				ObjectMeta: kmsrMeta,
+				Spec: bythepowerofv1.KmakeScheduleRunSpec{
+					KmakeScheduleRunOperation: bythepowerofv1.KmakeScheduleRunOperation{
+						Stop: &bythepowerofv1.KmakeScheduleRunStop{
+							Run: kmakerunname,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.Background(), kmsr)).Should(Succeed())
+
+			By("delete kmsr")
+			time.Sleep(time.Second * 5)
+
+			f := &bythepowerofv1.KmakeScheduleRun{}
 			Expect(k8sClient.Get(context.Background(), key, f)).Should(Succeed())
 			Expect(k8sClient.Delete(context.Background(), f)).Should(Succeed())
 
@@ -269,56 +296,26 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 				f := &bythepowerofv1.KmakeScheduleRun{}
 				return k8sClient.Get(context.Background(), key, f)
 			}, timeout, interval).ShouldNot(Succeed())
+
+			By("delete kmakerun")
+			key2 := types.NamespacedName{
+				Name:      kmakerunname,
+				Namespace: namespace,
+			}
+
+			f2 := &bythepowerofv1.KmakeRun{}
+			Expect(k8sClient.Get(context.Background(), key2, f2)).Should(Succeed())
+			Expect(k8sClient.Delete(context.Background(), f2)).Should(Succeed())
+
+			By("delete kmake")
+			key3 := types.NamespacedName{
+				Name:      kmakename,
+				Namespace: namespace,
+			}
+			f3 := &bythepowerofv1.Kmake{}
+			Expect(k8sClient.Get(context.Background(), key3, f3)).Should(Succeed())
+			Expect(k8sClient.Delete(context.Background(), f3)).Should(Succeed())
 		})
-
-		// It("Should create stop successfully", func() {
-		// 	By("Create kmake schedule run")
-
-		// 	kmsr := &bythepowerofv1.KmakeScheduleRun{
-		// 		ObjectMeta: kmsrMeta,
-		// 		Spec: bythepowerofv1.KmakeScheduleRunSpec{
-		// 			KmakeScheduleRunOperation: bythepowerofv1.KmakeScheduleRunOperation{
-		// 				Stop: &bythepowerofv1.KmakeScheduleRunStop{
-		// 					Run: kmakerunname,
-		// 				},
-		// 			},
-		// 		},
-		// 	}
-
-		// 	Expect(k8sClient.Create(context.Background(), kmsr)).Should(Succeed())
-
-		// 	By("delete kmsr")
-		// 	time.Sleep(time.Second * 5)
-
-		// 	f := &bythepowerofv1.KmakeScheduleRun{}
-		// 	Expect(k8sClient.Get(context.Background(), key, f)).Should(Succeed())
-		// 	Expect(k8sClient.Delete(context.Background(), f)).Should(Succeed())
-
-		// 	By("kmsr not exist")
-		// 	Eventually(func() error {
-		// 		f := &bythepowerofv1.KmakeScheduleRun{}
-		// 		return k8sClient.Get(context.Background(), key, f)
-		// 	}, timeout, interval).ShouldNot(Succeed())
-
-		// 	By("delete kmakerun")
-		// 	key2 := types.NamespacedName{
-		// 		Name:      kmakerunname,
-		// 		Namespace: namespace,
-		// 	}
-
-		// 	f2 := &bythepowerofv1.KmakeRun{}
-		// 	Expect(k8sClient.Get(context.Background(), key2, f2)).Should(Succeed())
-		// 	Expect(k8sClient.Delete(context.Background(), f2)).Should(Succeed())
-
-		// 	By("delete kmake")
-		// 	key3 := types.NamespacedName{
-		// 		Name:      kmakename,
-		// 		Namespace: namespace,
-		// 	}
-		// 	f3 := &bythepowerofv1.Kmake{}
-		// 	Expect(k8sClient.Get(context.Background(), key3, f3)).Should(Succeed())
-		// 	Expect(k8sClient.Delete(context.Background(), f3)).Should(Succeed())
-		// })
 
 		It("Should create delete successfully", func() {
 			By("Create kmake schedule run")
@@ -392,51 +389,42 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 
 			Expect(k8sClient.Create(context.Background(), kmsr)).Should(Succeed())
 
-			// statusMatch("xxx")
-
 			By("delete kmsr")
 			time.Sleep(time.Second * 5)
 
 			f := &bythepowerofv1.KmakeScheduleRun{}
 			// The reset should clear out this kmsr
 			Expect(k8sClient.Get(context.Background(), key, f)).ShouldNot(Succeed())
-
-			// Expect(k8sClient.Delete(context.Background(), f)).Should(Succeed())
-
-			// By("kmsr not exist")
-			// Eventually(func() error {
-			// 	f := &bythepowerofv1.KmakeScheduleRun{}
-			// 	return k8sClient.Get(context.Background(), key, f)
-			// }, timeout, interval).ShouldNot(Succeed())
 		})
 
-		// It("Should create force successfully", func() {
-		// 	By("Create kmake schedule run")
+		It("Should create force successfully", func() {
+			Skip("the force functionality is not written!")
+			By("Create kmake schedule run")
 
-		// 	kmsr := &bythepowerofv1.KmakeScheduleRun{
-		// 		ObjectMeta: kmsrMeta,
-		// 		Spec: bythepowerofv1.KmakeScheduleRunSpec{
-		// 			KmakeScheduleRunOperation: bythepowerofv1.KmakeScheduleRunOperation{
-		// 				Force: &bythepowerofv1.KmakeScheduleForce{},
-		// 			},
-		// 		},
-		// 	}
+			kmsr := &bythepowerofv1.KmakeScheduleRun{
+				ObjectMeta: kmsrMeta,
+				Spec: bythepowerofv1.KmakeScheduleRunSpec{
+					KmakeScheduleRunOperation: bythepowerofv1.KmakeScheduleRunOperation{
+						Force: &bythepowerofv1.KmakeScheduleForce{},
+					},
+				},
+			}
 
-		// 	Expect(k8sClient.Create(context.Background(), kmsr)).Should(Succeed())
+			Expect(k8sClient.Create(context.Background(), kmsr)).Should(Succeed())
 
-		// 	By("delete kmsr")
-		// 	time.Sleep(time.Second * 5)
+			By("delete kmsr")
+			time.Sleep(time.Second * 5)
 
-		// 	f := &bythepowerofv1.KmakeScheduleRun{}
-		// 	Expect(k8sClient.Get(context.Background(), key, f)).Should(Succeed())
-		// 	Expect(k8sClient.Delete(context.Background(), f)).Should(Succeed())
+			f := &bythepowerofv1.KmakeScheduleRun{}
+			Expect(k8sClient.Get(context.Background(), key, f)).Should(Succeed())
+			Expect(k8sClient.Delete(context.Background(), f)).Should(Succeed())
 
-		// 	By("kmsr not exist")
-		// 	Eventually(func() error {
-		// 		f := &bythepowerofv1.KmakeScheduleRun{}
-		// 		return k8sClient.Get(context.Background(), key, f)
-		// 	}, timeout, interval).ShouldNot(Succeed())
+			By("kmsr not exist")
+			Eventually(func() error {
+				f := &bythepowerofv1.KmakeScheduleRun{}
+				return k8sClient.Get(context.Background(), key, f)
+			}, timeout, interval).ShouldNot(Succeed())
 
-		// })
+		})
 	})
 })
