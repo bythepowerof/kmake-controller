@@ -72,7 +72,10 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 		// 	instance.Annotations = make(map[string]string)
 		// }
 		// instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
-		bythepowerofv1.SetDomainAnnotation(&instance.ObjectMeta, instance.Status)
+		err := bythepowerofv1.SetDomainAnnotation(&instance.ObjectMeta, instance.Status)
+		if err != nil {
+			return err
+		}
 		return r.Update(context.Background(), instance)
 	}
 	return nil
