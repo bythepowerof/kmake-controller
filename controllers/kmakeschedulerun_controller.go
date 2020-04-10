@@ -260,42 +260,29 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 				// add in the env mount and env
 				if requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts == nil {
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
-						MountPath: "/usr/share/env",
-						Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
-					}
-				} else {
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-						requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-						corev1.VolumeMount{
-							MountPath: "/usr/share/env",
-							Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
-						})
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 0)
 				}
 
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/env",
+						Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
+					})
+
 				if requiredjob.Spec.Template.Spec.Volumes == nil {
-					requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-					requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
+					requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 0)
+				}
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
 						Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
 							},
 						},
-					}
-				} else {
-					requiredjob.Spec.Template.Spec.Volumes = append(
-						requiredjob.Spec.Template.Spec.Volumes,
-						corev1.Volume{
-							Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
-								},
-							},
-						})
-				}
+					})
 
 				requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
 					requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
