@@ -128,15 +128,15 @@ func GetDomainLabel(meta metav1.ObjectMeta, label Label) string {
 	return ""
 }
 
-func SetDomainAnnotation(meta *metav1.ObjectMeta, resources KmakeStatus) error {
-	bytes, err := json.Marshal(resources.Resources)
+func SetDomainAnnotation(annotations map[string]string, resources map[string]string) error {
+	bytes, err := json.Marshal(resources)
 	if err != nil {
 		return err
 	}
-	if meta.Annotations == nil {
-		meta.Annotations = make(map[string]string)
+	if annotations == nil {
+		annotations = make(map[string]string)
 	}
-	meta.Annotations[makeDomainString(KmakeLabel.String())] = string(bytes)
+	annotations[makeDomainString(KmakeLabel.String())] = string(bytes)
 	return nil
 }
 
