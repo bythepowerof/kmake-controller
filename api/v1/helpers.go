@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -124,6 +126,18 @@ func GetDomainLabel(meta metav1.ObjectMeta, label Label) string {
 		return val
 	}
 	return ""
+}
+
+func SetDomainAnnotation(meta *metav1.ObjectMeta, resources KmakeStatus) error {
+	bytes, err := json.Marshal(resources.Resources)
+	if err != nil {
+		return err
+	}
+	if meta.Annotations == nil {
+		meta.Annotations = make(map[string]string)
+	}
+	meta.Annotations[makeDomainString(KmakeLabel.String())] = string(bytes)
+	return nil
 }
 
 // KmakeStatus defines the observed state of Kmake things

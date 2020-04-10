@@ -64,14 +64,15 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
-		bytes, err := json.Marshal(instance.Status.Resources)
-		if err != nil {
-			return err
-		}
-		if instance.Annotations == nil {
-			instance.Annotations = make(map[string]string)
-		}
-		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
+		// bytes, err := json.Marshal(instance.Status.Resources)
+		// if err != nil {
+		// 	return err
+		// }
+		// if instance.Annotations == nil {
+		// 	instance.Annotations = make(map[string]string)
+		// }
+		// instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
+		bythepowerofv1.SetDomainAnnotation(&instance.ObjectMeta, instance.Status)
 		return r.Update(context.Background(), instance)
 	}
 	return nil
