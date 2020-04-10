@@ -19,7 +19,6 @@ package v1
 import (
 	"encoding/json"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -107,37 +106,48 @@ func makeDomainString(entry string) string {
 	return kmakeDomain + entry
 }
 
-func SetDomainLabel(meta *metav1.ObjectMeta, label Label, value string) bool {
-	if meta.Labels == nil {
-		meta.Labels = make(map[string]string)
+func SetDomainLabel(labels map[string]string, label Label, value string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string)
 	}
 	domain := makeDomainString(label.String())
-	meta.Labels[domain] = value
-	return meta.Labels[domain] == value
+	labels[domain] = value
+	return labels
 }
 
-func GetDomainLabel(meta metav1.ObjectMeta, label Label) string {
-	if meta.Labels == nil {
+func GetDomainLabel(labels map[string]string, label Label) string {
+	if labels == nil {
 		return ""
 	}
 	domain := makeDomainString(label.String())
 
-	if val, ok := meta.Labels[domain]; ok {
+	if val, ok := labels[domain]; ok {
 		return val
 	}
 	return ""
 }
 
-func SetDomainAnnotation(annotations map[string]string, resources map[string]string) error {
+func SetDomainAnnotation(annotations map[string]string, resources map[string]string) (map[string]string, error) {
 	bytes, err := json.Marshal(resources)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
 	annotations[makeDomainString(KmakeLabel.String())] = string(bytes)
-	return nil
+	return annotations, nil
+}
+
+func GetDomainAnnotation(annotations map[string]string) string {
+	if annotations == nil {
+		return ""
+	}
+
+	if val, ok := annotations[makeDomainString(KmakeLabel.String())]; ok {
+		return val
+	}
+	return ""
 }
 
 // KmakeStatus defines the observed state of Kmake things

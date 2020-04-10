@@ -65,7 +65,8 @@ func (r *KmakeReconciler) Event(instance *bythepowerofv1.Kmake, phase bythepower
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
 
-		err := bythepowerofv1.SetDomainAnnotation(instance.Annotations, instance.Status.Resources)
+		var err error
+		instance.Annotations, err = bythepowerofv1.SetDomainAnnotation(instance.Annotations, instance.Status.Resources)
 		if err != nil {
 			return err
 		}

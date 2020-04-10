@@ -133,14 +133,14 @@ func (kmsr *KmakeScheduleRun) IsBeingDeleted() bool {
 }
 
 func (kmsr *KmakeScheduleRun) HasEnded() bool {
-	val := GetDomainLabel(kmsr.ObjectMeta, StatusLabel)
+	val := GetDomainLabel(kmsr.Labels, StatusLabel)
 	return strings.Contains(val, "Success") ||
 		strings.Contains(val, "Error") ||
 		strings.Contains(val, "Abort")
 }
 
 func (kmsr *KmakeScheduleRun) IsActive() bool {
-	val := GetDomainLabel(kmsr.ObjectMeta, StatusLabel)
+	val := GetDomainLabel(kmsr.Labels, StatusLabel)
 	return strings.Contains(val, "Provision") ||
 		strings.Contains(val, "Active")
 }
@@ -154,19 +154,19 @@ func (kmsr *KmakeScheduleRun) IsScheduled() bool {
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeName() string {
-	return GetDomainLabel(kmsr.ObjectMeta, KmakeLabel)
+	return GetDomainLabel(kmsr.Labels, KmakeLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeRunName() string {
-	return GetDomainLabel(kmsr.ObjectMeta, RunLabel)
+	return GetDomainLabel(kmsr.Labels, RunLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeScheduleName() string {
-	return GetDomainLabel(kmsr.ObjectMeta, ScheduleLabel)
+	return GetDomainLabel(kmsr.Labels, ScheduleLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetKmakeScheduleEnvName() string {
-	return GetDomainLabel(kmsr.ObjectMeta, ScheduleEnvLabel)
+	return GetDomainLabel(kmsr.Labels, ScheduleEnvLabel)
 }
 
 func (kmsr *KmakeScheduleRun) GetJobName() string {
