@@ -476,9 +476,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
 					client.MatchingLabels{
-						bythepowerofv1.ScheduleLabel.String(): scheduler,
-						bythepowerofv1.RunLabel.String():      kmr,
-						bythepowerofv1.WorkloadLabel.String(): "yes"},
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel): scheduler,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):      kmr,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel): "yes"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)
@@ -510,9 +510,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
-					client.MatchingLabels{bythepowerofv1.ScheduleLabel.String(): scheduler,
-						bythepowerofv1.RunLabel.String():      instance.Spec.Restart.Run,
-						bythepowerofv1.WorkloadLabel.String(): "no"},
+					client.MatchingLabels{
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel): scheduler,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):      instance.Spec.Restart.Run,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel): "no"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)

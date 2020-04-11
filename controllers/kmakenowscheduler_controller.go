@@ -221,12 +221,12 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					SetOwnerReference(&run, kmsr, r.Scheme)
 
 					kmsr.SetLabels(map[string]string{
-						bythepowerofv1.KmakeLabel.String():       kmakeName,
-						bythepowerofv1.ScheduleLabel.String():    instance.Name,
-						bythepowerofv1.ScheduleEnvLabel.String(): currentenvmap.GetName(),
-						bythepowerofv1.RunLabel.String():         run.GetName(),
-						bythepowerofv1.WorkloadLabel.String():    "yes",
-						bythepowerofv1.StatusLabel.String():      "Provision",
+						bythepowerofv1.MakeDomainString(bythepowerofv1.KmakeLabel):       kmakeName,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel):    instance.Name,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleEnvLabel): currentenvmap.GetName(),
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):         run.GetName(),
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):    "yes",
+						bythepowerofv1.MakeDomainString(bythepowerofv1.StatusLabel):      "Provision",
 					})
 
 					err = r.Create(ctx, kmsr)

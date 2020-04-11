@@ -104,15 +104,15 @@ func removeString(slice []string, s string) (result []string) {
 	return
 }
 
-func makeDomainString(entry string) string {
-	return kmakeDomain + entry
+func MakeDomainString(entry Label) string {
+	return kmakeDomain + entry.String()
 }
 
 func SetDomainLabel(labels map[string]string, label Label, value string) map[string]string {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	domain := makeDomainString(label.String())
+	domain := MakeDomainString(label)
 	labels[domain] = value
 	return labels
 }
@@ -121,7 +121,7 @@ func GetDomainLabel(labels map[string]string, label Label) string {
 	if labels == nil {
 		return ""
 	}
-	domain := makeDomainString(label.String())
+	domain := MakeDomainString(label)
 
 	if val, ok := labels[domain]; ok {
 		return val
@@ -137,7 +137,7 @@ func SetDomainAnnotation(annotations map[string]string, resources map[string]str
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	annotations[makeDomainString(KmakeLabel.String())] = string(bytes)
+	annotations[MakeDomainString(KmakeLabel)] = string(bytes)
 	return annotations, nil
 }
 
@@ -146,7 +146,7 @@ func GetDomainAnnotation(annotations map[string]string) string {
 		return ""
 	}
 
-	if val, ok := annotations[makeDomainString(KmakeLabel.String())]; ok {
+	if val, ok := annotations[MakeDomainString(KmakeLabel)]; ok {
 		return val
 	}
 	return ""
