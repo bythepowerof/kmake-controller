@@ -64,18 +64,13 @@ func (r *KmakeScheduleRunReconciler) Event(instance *bythepowerofv1.KmakeSchedul
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
-		bytes, err := json.Marshal(instance.Status.Resources)
+
+		instance.Labels = bythepowerofv1.SetDomainLabel(instance.Labels, bythepowerofv1.StatusLabel, phase.String())
+		var err error
+		instance.Annotations, err = bythepowerofv1.SetDomainAnnotation(instance.Annotations, instance.Status.Resources)
 		if err != nil {
 			return err
 		}
-		if instance.Annotations == nil {
-			instance.Annotations = make(map[string]string)
-		}
-		if instance.Labels == nil {
-			instance.Labels = make(map[string]string)
-		}
-		instance.Labels["bythepowerof.github.io/status"] = phase.String()
-		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
 	return nil
@@ -232,8 +227,8 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				requiredjob := &v1.Job{
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.Job),
 				}
+				requiredjob.Labels = bythepowerofv1.SetDomainLabel(requiredjob.Labels, bythepowerofv1.ScheduleRunLabel, instance.GetName())
 
-				requiredjob.Labels["bythepowerof.github.io/schedulerun"] = instance.GetName()
 				ctrl.SetControllerReference(instance, requiredjob, r.Scheme)
 
 				if err := SetOwnerReference(kmake, requiredjob, r.Scheme); err != nil {
@@ -430,17 +425,20 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do := &client.DeleteAllOfOptions{}
 				labels := client.MatchingLabels{}
 
-				if scheduler, ok := instance.GetLabels()["bythepowerof.github.io/schedule-instance"]; ok {
+				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleLabel)
+
+				if scheduler != "" {
 					do.ApplyOptions([]client.DeleteAllOfOption{
 						client.InNamespace(req.NamespacedName.Namespace)})
-					labels["bythepowerof.github.io/schedule-instance"] = scheduler
+					labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleLabel, scheduler)
 				} else {
 					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, fmt.Errorf("No scheduler set")
 				}
 
 				if instance.Spec.Reset.Full == "" || instance.Spec.Reset.Full == "no" {
-					labels["bythepowerof.github.io/workload"] = "yes"
+					labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.WorkloadLabel, "yes")
+
 				}
 				do.ApplyOptions([]client.DeleteAllOfOption{labels})
 
@@ -461,13 +459,14 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			}
 		case "stop":
 			if instance.IsNew() {
-				var si, kmr string
-				var ok bool
-				if si, ok = instance.Labels["bythepowerof.github.io/schedule-instance"]; !ok {
+				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleLabel)
+				kmr := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.RunLabel)
+
+				if scheduler == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, err
 				}
-				if kmr, ok = instance.Labels["bythepowerof.github.io/run"]; !ok {
+				if kmr == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No kmakerun set")
 					return reconcile.Result{}, err
 				}
@@ -476,10 +475,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				del := &bythepowerofv1.KmakeScheduleRun{}
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
-					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": si,
-						// "bythepowerof.github.io/status": "Active",
-						"bythepowerof.github.io/run":      kmr,
-						"bythepowerof.github.io/workload": "yes"},
+					client.MatchingLabels{
+						bythepowerofv1.ScheduleLabel.String(): scheduler,
+						bythepowerofv1.RunLabel.String():      kmr,
+						bythepowerofv1.WorkloadLabel.String(): "yes"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)
@@ -492,9 +491,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			}
 		case "restart":
 			if instance.IsNew() {
-				var si string
-				var ok bool
-				if si, ok = instance.Labels["bythepowerof.github.io/schedule-instance"]; !ok {
+
+				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleLabel)
+
+				if scheduler == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, err
 				}
@@ -510,11 +510,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
-					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": si,
-						// "bythepowerof.github.io/status": "Stop",
-						"bythepowerof.github.io/run":      instance.Spec.Restart.Run,
-						"bythepowerof.github.io/workload": "no"},
-					// client.MatchingLabelsSelector{Selector: x},
+					client.MatchingLabels{bythepowerofv1.ScheduleLabel.String(): scheduler,
+						bythepowerofv1.RunLabel.String():      instance.Spec.Restart.Run,
+						bythepowerofv1.WorkloadLabel.String(): "no"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)

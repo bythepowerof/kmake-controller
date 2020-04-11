@@ -17,9 +17,7 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	// "time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -60,14 +58,12 @@ func (r *KmakeRunReconciler) Event(instance *bythepowerofv1.KmakeRun, phase byth
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
-		bytes, err := json.Marshal(instance.Status.Resources)
+
+		var err error
+		instance.Annotations, err = bythepowerofv1.SetDomainAnnotation(instance.Annotations, instance.Status.Resources)
 		if err != nil {
 			return err
 		}
-		if instance.Annotations == nil {
-			instance.Annotations = make(map[string]string)
-		}
-		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
 	return nil

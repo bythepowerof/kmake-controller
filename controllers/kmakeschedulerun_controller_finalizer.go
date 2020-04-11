@@ -44,7 +44,8 @@ func (r *KmakeScheduleRunReconciler) handleFinalizer(instance *bythepowerofv1.Km
 		do.ApplyOptions([]client.DeleteAllOfOption{
 			client.InNamespace(instance.Namespace)})
 		labels := client.MatchingLabels{}
-		labels["bythepowerof.github.io/schedulerun"] = instance.Name
+		labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleRunLabel, instance.Name)
+
 		do.ApplyOptions([]client.DeleteAllOfOption{labels})
 
 		policy := metav1.DeletePropagationBackground
