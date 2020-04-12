@@ -43,7 +43,7 @@ func (r *KmakeNowSchedulerReconciler) handleFinalizer(instance *bythepowerofv1.K
 		do.ApplyOptions([]client.DeleteAllOfOption{
 			client.InNamespace(instance.Namespace)})
 		labels := client.MatchingLabels{}
-		labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleLabel, instance.Name)
+		labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleInstLabel, instance.Name)
 
 		policy := metav1.DeletePropagationBackground
 		o := &client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{PropagationPolicy: &policy}}

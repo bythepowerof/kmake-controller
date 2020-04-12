@@ -425,12 +425,12 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do := &client.DeleteAllOfOptions{}
 				labels := client.MatchingLabels{}
 
-				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleLabel)
+				si := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleInstLabel)
 
-				if scheduler != "" {
+				if si != "" {
 					do.ApplyOptions([]client.DeleteAllOfOption{
 						client.InNamespace(req.NamespacedName.Namespace)})
-					labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleLabel, scheduler)
+					labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleInstLabel, si)
 				} else {
 					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, fmt.Errorf("No scheduler set")
@@ -459,10 +459,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			}
 		case "stop":
 			if instance.IsNew() {
-				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleLabel)
+				si := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleInstLabel)
 				kmr := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.RunLabel)
 
-				if scheduler == "" {
+				if si == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, err
 				}
@@ -476,9 +476,9 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
 					client.MatchingLabels{
-						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel): scheduler,
-						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):      kmr,
-						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel): "yes"},
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): si,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):          kmr,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):     "yes"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)
@@ -492,7 +492,7 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		case "restart":
 			if instance.IsNew() {
 
-				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleLabel)
+				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleInstLabel)
 
 				if scheduler == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
@@ -506,14 +506,12 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do := &client.DeleteAllOfOptions{}
 				del := &bythepowerofv1.KmakeScheduleRun{}
 
-				// x, err := labels.Parse("x in (foo,,baz),y,z notin ()")
-
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
 					client.MatchingLabels{
-						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel): scheduler,
-						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):      instance.Spec.Restart.Run,
-						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel): "no"},
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): scheduler,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):          instance.Spec.Restart.Run,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):     "no"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)

@@ -141,6 +141,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+
 			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -170,7 +171,9 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	runs := &bythepowerofv1.KmakeScheduleRunList{}
 	opts := []client.ListOption{
 		client.InNamespace(req.NamespacedName.Namespace),
-		client.MatchingLabels{bythepowerofv1.ScheduleLabel.String(): instance.GetName()},
+		client.MatchingLabels{
+			bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): instance.GetName(),
+		},
 	}
 	err = r.List(ctx, runs, opts...)
 	if err != nil {
@@ -186,9 +189,10 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// look at the kmakerun items
 	for _, element := range instance.Spec.Monitor {
 		runs := &bythepowerofv1.KmakeRunList{}
+		scheduleLabel := bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel)
 		opts := []client.ListOption{
 			client.InNamespace(req.NamespacedName.Namespace),
-			client.MatchingLabels{bythepowerofv1.ScheduleLabel.String(): element},
+			client.MatchingLabels{scheduleLabel: element},
 		}
 
 		err = r.List(ctx, runs, opts...)
@@ -221,15 +225,21 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					SetOwnerReference(&run, kmsr, r.Scheme)
 
 					kmsr.SetLabels(map[string]string{
-						bythepowerofv1.MakeDomainString(bythepowerofv1.KmakeLabel):       kmakeName,
-						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel):    instance.Name,
-						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleEnvLabel): currentenvmap.GetName(),
-						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):         run.GetName(),
-						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):    "yes",
-						bythepowerofv1.MakeDomainString(bythepowerofv1.StatusLabel):      "Provision",
+						bythepowerofv1.MakeDomainString(bythepowerofv1.KmakeLabel):        kmakeName,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): instance.Name,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleEnvLabel):  currentenvmap.GetName(),
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):          run.GetName(),
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):     "yes",
+						bythepowerofv1.MakeDomainString(bythepowerofv1.StatusLabel):       "Provision",
 					})
 
 					err = r.Create(ctx, kmsr)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+					// seems we need to refetch the instance here
+					instance = &bythepowerofv1.KmakeNowScheduler{}
+					err = r.Get(ctx, req.NamespacedName, instance)
 					if err != nil {
 						return reconcile.Result{}, err
 					}
