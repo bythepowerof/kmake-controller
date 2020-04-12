@@ -64,18 +64,13 @@ func (r *KmakeScheduleRunReconciler) Event(instance *bythepowerofv1.KmakeSchedul
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
-		bytes, err := json.Marshal(instance.Status.Resources)
+
+		instance.Labels = bythepowerofv1.SetDomainLabel(instance.Labels, bythepowerofv1.StatusLabel, phase.String())
+		var err error
+		instance.Annotations, err = bythepowerofv1.SetDomainAnnotation(instance.Annotations, instance.Status.Resources)
 		if err != nil {
 			return err
 		}
-		if instance.Annotations == nil {
-			instance.Annotations = make(map[string]string)
-		}
-		if instance.Labels == nil {
-			instance.Labels = make(map[string]string)
-		}
-		instance.Labels["bythepowerof.github.io/status"] = phase.String()
-		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
 	return nil
@@ -232,8 +227,8 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				requiredjob := &v1.Job{
 					ObjectMeta: ObjectMetaConcat(instance, req.NamespacedName, bythepowerofv1.Job),
 				}
+				requiredjob.Labels = bythepowerofv1.SetDomainLabel(requiredjob.Labels, bythepowerofv1.ScheduleRunLabel, instance.GetName())
 
-				requiredjob.Labels["bythepowerof.github.io/schedulerun"] = instance.GetName()
 				ctrl.SetControllerReference(instance, requiredjob, r.Scheme)
 
 				if err := SetOwnerReference(kmake, requiredjob, r.Scheme); err != nil {
@@ -260,42 +255,29 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 				// add in the env mount and env
 				if requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts == nil {
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
-						MountPath: "/usr/share/env",
-						Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
-					}
-				} else {
-					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-						requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
-						corev1.VolumeMount{
-							MountPath: "/usr/share/env",
-							Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
-						})
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 0)
 				}
 
+				requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					requiredjob.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						MountPath: "/usr/share/env",
+						Name:      kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
+					})
+
 				if requiredjob.Spec.Template.Spec.Volumes == nil {
-					requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-					requiredjob.Spec.Template.Spec.Volumes[0] = corev1.Volume{
+					requiredjob.Spec.Template.Spec.Volumes = make([]corev1.Volume, 0)
+				}
+				requiredjob.Spec.Template.Spec.Volumes = append(
+					requiredjob.Spec.Template.Spec.Volumes,
+					corev1.Volume{
 						Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
 							},
 						},
-					}
-				} else {
-					requiredjob.Spec.Template.Spec.Volumes = append(
-						requiredjob.Spec.Template.Spec.Volumes,
-						corev1.Volume{
-							Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap),
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: kmake.Status.GetSubReference(bythepowerofv1.EnvMap)},
-								},
-							},
-						})
-				}
+					})
 
 				requiredjob.Spec.Template.Spec.Containers[0].EnvFrom = append(
 					requiredjob.Spec.Template.Spec.Containers[0].EnvFrom,
@@ -443,17 +425,20 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do := &client.DeleteAllOfOptions{}
 				labels := client.MatchingLabels{}
 
-				if scheduler, ok := instance.GetLabels()["bythepowerof.github.io/schedule-instance"]; ok {
+				si := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleInstLabel)
+
+				if si != "" {
 					do.ApplyOptions([]client.DeleteAllOfOption{
 						client.InNamespace(req.NamespacedName.Namespace)})
-					labels["bythepowerof.github.io/schedule-instance"] = scheduler
+					labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.ScheduleInstLabel, si)
 				} else {
 					err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, fmt.Errorf("No scheduler set")
 				}
 
 				if instance.Spec.Reset.Full == "" || instance.Spec.Reset.Full == "no" {
-					labels["bythepowerof.github.io/workload"] = "yes"
+					labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.WorkloadLabel, "yes")
+
 				}
 				do.ApplyOptions([]client.DeleteAllOfOption{labels})
 
@@ -466,18 +451,22 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 					return reconcile.Result{}, err
 
 				}
-				err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
-				return reconcile.Result{}, err
+				// We can't do this as it will have been deleted if its a full reset!
+				// err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Runs, "")
+				// return reconcile.Result{}, err
+				return reconcile.Result{}, nil
+
 			}
 		case "stop":
 			if instance.IsNew() {
-				var si, kmr string
-				var ok bool
-				if si, ok = instance.Labels["bythepowerof.github.io/schedule-instance"]; !ok {
+				si := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleInstLabel)
+				kmr := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.RunLabel)
+
+				if si == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, err
 				}
-				if kmr, ok = instance.Labels["bythepowerof.github.io/run"]; !ok {
+				if kmr == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No kmakerun set")
 					return reconcile.Result{}, err
 				}
@@ -486,10 +475,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				del := &bythepowerofv1.KmakeScheduleRun{}
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
-					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": si,
-						// "bythepowerof.github.io/status": "Active",
-						"bythepowerof.github.io/run":      kmr,
-						"bythepowerof.github.io/workload": "yes"},
+					client.MatchingLabels{
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): si,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):          kmr,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):     "yes"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)
@@ -502,9 +491,10 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			}
 		case "restart":
 			if instance.IsNew() {
-				var si string
-				var ok bool
-				if si, ok = instance.Labels["bythepowerof.github.io/schedule-instance"]; !ok {
+
+				scheduler := bythepowerofv1.GetDomainLabel(instance.Labels, bythepowerofv1.ScheduleInstLabel)
+
+				if scheduler == "" {
 					r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Runs, "No scheduler set")
 					return reconcile.Result{}, err
 				}
@@ -516,15 +506,12 @@ func (r *KmakeScheduleRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 				do := &client.DeleteAllOfOptions{}
 				del := &bythepowerofv1.KmakeScheduleRun{}
 
-				// x, err := labels.Parse("x in (foo,,baz),y,z notin ()")
-
 				do.ApplyOptions([]client.DeleteAllOfOption{
 					client.InNamespace(req.NamespacedName.Namespace),
-					client.MatchingLabels{"bythepowerof.github.io/schedule-instance": si,
-						// "bythepowerof.github.io/status": "Stop",
-						"bythepowerof.github.io/run":      instance.Spec.Restart.Run,
-						"bythepowerof.github.io/workload": "no"},
-					// client.MatchingLabelsSelector{Selector: x},
+					client.MatchingLabels{
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): scheduler,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):          instance.Spec.Restart.Run,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):     "no"},
 				})
 
 				err = r.DeleteAllOf(ctx, del, do)

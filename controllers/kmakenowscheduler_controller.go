@@ -17,7 +17,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -62,14 +61,12 @@ func (r *KmakeNowSchedulerReconciler) Event(instance *bythepowerofv1.KmakeNowSch
 
 		instance.Status.UpdateSubResource(subresource, name)
 		r.Status().Update(context.Background(), instance)
-		bytes, err := json.Marshal(instance.Status.Resources)
+
+		var err error
+		instance.Annotations, err = bythepowerofv1.SetDomainAnnotation(instance.Annotations, instance.Status.Resources)
 		if err != nil {
 			return err
 		}
-		if instance.Annotations == nil {
-			instance.Annotations = make(map[string]string)
-		}
-		instance.Annotations["bythepowerof.github.io/kmake"] = string(bytes)
 		return r.Update(context.Background(), instance)
 	}
 	return nil
@@ -144,6 +141,7 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+
 			err = r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.EnvMap, requiredenvmap.ObjectMeta.Name)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -173,7 +171,9 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	runs := &bythepowerofv1.KmakeScheduleRunList{}
 	opts := []client.ListOption{
 		client.InNamespace(req.NamespacedName.Namespace),
-		client.MatchingLabels{"bythepowerof.github.io/schedule-instance": instance.GetName()},
+		client.MatchingLabels{
+			bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): instance.GetName(),
+		},
 	}
 	err = r.List(ctx, runs, opts...)
 	if err != nil {
@@ -189,9 +189,10 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// look at the kmakerun items
 	for _, element := range instance.Spec.Monitor {
 		runs := &bythepowerofv1.KmakeRunList{}
+		scheduleLabel := bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleLabel)
 		opts := []client.ListOption{
 			client.InNamespace(req.NamespacedName.Namespace),
-			client.MatchingLabels{"bythepowerof.github.io/scheduler": element},
+			client.MatchingLabels{scheduleLabel: element},
 		}
 
 		err = r.List(ctx, runs, opts...)
@@ -200,8 +201,8 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 
 		for _, run := range runs.Items {
-			if val, ok := run.GetObjectMeta().GetLabels()["bythepowerof.github.io/kmake"]; ok {
-
+			kmakeName := bythepowerofv1.GetDomainLabel(run.Labels, bythepowerofv1.KmakeLabel)
+			if kmakeName != "" {
 				found := false
 
 				for _, i := range allRuns {
@@ -224,15 +225,21 @@ func (r *KmakeNowSchedulerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 					SetOwnerReference(&run, kmsr, r.Scheme)
 
 					kmsr.SetLabels(map[string]string{
-						"bythepowerof.github.io/kmake":             val,
-						"bythepowerof.github.io/schedule-instance": instance.Name,
-						"bythepowerof.github.io/schedule-env":      currentenvmap.GetName(),
-						"bythepowerof.github.io/run":               run.GetName(),
-						"bythepowerof.github.io/workload":          "yes",
-						"bythepowerof.github.io/status":            "Provision",
+						bythepowerofv1.MakeDomainString(bythepowerofv1.KmakeLabel):        kmakeName,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleInstLabel): instance.Name,
+						bythepowerofv1.MakeDomainString(bythepowerofv1.ScheduleEnvLabel):  currentenvmap.GetName(),
+						bythepowerofv1.MakeDomainString(bythepowerofv1.RunLabel):          run.GetName(),
+						bythepowerofv1.MakeDomainString(bythepowerofv1.WorkloadLabel):     "yes",
+						bythepowerofv1.MakeDomainString(bythepowerofv1.StatusLabel):       "Provision",
 					})
 
 					err = r.Create(ctx, kmsr)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+					// seems we need to refetch the instance here
+					instance = &bythepowerofv1.KmakeNowScheduler{}
+					err = r.Get(ctx, req.NamespacedName, instance)
 					if err != nil {
 						return reconcile.Result{}, err
 					}

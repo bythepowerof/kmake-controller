@@ -96,10 +96,20 @@ var _ = Describe("helpers", func() {
 			Expect(fetched.Status.GetSubReference(EnvMap)).To(Equal(""))
 
 			By("set a domain label")
-			Expect(SetDomainLabel(&fetched.ObjectMeta, KmakeLabel, "test")).To(Equal(true))
+			fetched.Labels = SetDomainLabel(fetched.Labels, KmakeLabel, "test")
+			Expect(fetched.Labels).To(Equal(map[string]string{"bythepowerof.github.io/kmake": "test"}))
 
 			By("get a domain label")
-			Expect(GetDomainLabel(fetched.ObjectMeta, KmakeLabel)).To(Equal("test"))
+			Expect(GetDomainLabel(fetched.Labels, KmakeLabel)).To(Equal("test"))
+
+			By("set annotation")
+			var err error
+			fetched.Annotations, err = SetDomainAnnotation(fetched.Annotations, map[string]string{"test": "aaa"})
+			Expect(err).Should(BeNil())
+			Expect(fetched.Annotations["bythepowerof.github.io/kmake"]).To(Equal(`{"test":"aaa"}`))
+
+			By("get annotation")
+			Expect(GetDomainAnnotation(fetched.Annotations)).To(Equal(`{"test":"aaa"}`))
 
 			By("getting NamespacedNameConcat for defined sub")
 			Expect(fetched.Status.NamespacedNameConcat(Main, "default")).To(Equal(types.NamespacedName{

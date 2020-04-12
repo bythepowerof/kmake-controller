@@ -17,7 +17,8 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"encoding/json"
+
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -75,11 +76,14 @@ const (
 	StatusLabel
 	RunLabel
 	ScheduleLabel
+	ScheduleInstLabel
 	ScheduleEnvLabel
+	WorkloadLabel
+	ScheduleRunLabel
 )
 
 func (d Label) String() string {
-	return [...]string{"kmake", "status", "run", "schedule", "schedule-env"}[d]
+	return [...]string{"kmake", "status", "run", "schedule", "schedule-instance", "schedule-env", "workload", "schedulerun"}[d]
 }
 
 func containsString(slice []string, s string) bool {
@@ -101,26 +105,49 @@ func removeString(slice []string, s string) (result []string) {
 	return
 }
 
-func makeDomainString(entry string) string {
-	return kmakeDomain + entry
+func MakeDomainString(entry Label) string {
+	return kmakeDomain + entry.String()
 }
 
-func SetDomainLabel(meta *metav1.ObjectMeta, label Label, value string) bool {
-	if meta.Labels == nil {
-		meta.Labels = make(map[string]string)
+func SetDomainLabel(labels map[string]string, label Label, value string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string)
 	}
-	domain := makeDomainString(label.String())
-	meta.Labels[domain] = value
-	return meta.Labels[domain] == value
+	domain := MakeDomainString(label)
+	labels[domain] = value
+	return labels
 }
 
-func GetDomainLabel(meta metav1.ObjectMeta, label Label) string {
-	if meta.Labels == nil {
+func GetDomainLabel(labels map[string]string, label Label) string {
+	if labels == nil {
 		return ""
 	}
-	domain := makeDomainString(label.String())
+	domain := MakeDomainString(label)
 
-	if val, ok := meta.Labels[domain]; ok {
+	if val, ok := labels[domain]; ok {
+		return val
+	}
+	return ""
+}
+
+func SetDomainAnnotation(annotations map[string]string, resources map[string]string) (map[string]string, error) {
+	bytes, err := json.Marshal(resources)
+	if err != nil {
+		return nil, err
+	}
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[MakeDomainString(KmakeLabel)] = string(bytes)
+	return annotations, nil
+}
+
+func GetDomainAnnotation(annotations map[string]string) string {
+	if annotations == nil {
+		return ""
+	}
+
+	if val, ok := annotations[MakeDomainString(KmakeLabel)]; ok {
 		return val
 	}
 	return ""

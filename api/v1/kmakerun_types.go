@@ -83,7 +83,7 @@ func (kmakerun *KmakeRun) IsBeingDeleted() bool {
 }
 
 func (kmakerun *KmakeRun) GetKmakeName() string {
-	return GetDomainLabel(kmakerun.ObjectMeta, KmakeLabel)
+	return GetDomainLabel(kmakerun.Labels, KmakeLabel)
 }
 
 const KmakeRunFinalizerName = "kmakerun.finalizers.bythepowerof.github.com"

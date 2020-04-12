@@ -43,7 +43,8 @@ func (r *KmakeReconciler) handleFinalizer(instance *bythepowerofv1.Kmake) error 
 		do.ApplyOptions([]client.DeleteAllOfOption{
 			client.InNamespace(instance.Namespace)})
 		labels := client.MatchingLabels{}
-		labels["bythepowerof.github.io/kmake"] = instance.Name
+		labels = bythepowerofv1.SetDomainLabel(labels, bythepowerofv1.KmakeLabel, instance.Name)
+
 		do.ApplyOptions([]client.DeleteAllOfOption{labels})
 
 		policy := metav1.DeletePropagationBackground

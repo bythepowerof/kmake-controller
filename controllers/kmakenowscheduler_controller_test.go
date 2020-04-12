@@ -19,7 +19,7 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 	const timeout2 = time.Second * 120
 	const interval = time.Second * 1
 	const namespace = "default"
-	const kmnsname = "foo5"
+	const kmnsname = "foo54"
 	const kmakerunname = "foo6"
 	const kmakename = "kmake3"
 
@@ -74,10 +74,11 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 				kmsrName = f.Status.GetSubReference(bythepowerofv1.Runs)
 
 				g := &bythepowerofv1.KmakeScheduleRun{}
-				return k8sClient.Get(context.Background(), types.NamespacedName{
+				err := k8sClient.Get(context.Background(), types.NamespacedName{
 					Name:      kmsrName,
 					Namespace: namespace,
 				}, g)
+				return err
 			}, timeout, interval).Should(BeNil())
 		}
 
@@ -142,8 +143,8 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 					Name:      kmakerunname,
 					Namespace: namespace,
 					Labels: map[string]string{
-						"bythepowerof.github.io/kmake":     kmakename,
-						"bythepowerof.github.io/scheduler": "test",
+						"bythepowerof.github.io/kmake":    kmakename,
+						"bythepowerof.github.io/schedule": "test2",
 					},
 				},
 				Spec: bythepowerofv1.KmakeRunSpec{},
@@ -159,7 +160,7 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 					Namespace: namespace,
 				},
 				Spec: bythepowerofv1.KmakeNowSchedulerSpec{
-					Monitor: []string{"test"},
+					Monitor: []string{"test2"},
 					Variables: map[string]string{
 						"key1": "value1",
 						"key2": "value2",
@@ -219,23 +220,23 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 			Expect(k8sClient.Get(context.Background(), key4, f4)).Should(Succeed())
 			Expect(k8sClient.Delete(context.Background(), f4)).Should(Succeed())
 
-			By("delete kmake")
-			key2 := types.NamespacedName{
-				Name:      kmakename,
-				Namespace: namespace,
-			}
-			f2 := &bythepowerofv1.Kmake{}
-			Expect(k8sClient.Get(context.Background(), key2, f2)).Should(Succeed())
-			Expect(k8sClient.Delete(context.Background(), f2)).Should(Succeed())
+			// By("delete kmake")
+			// key2 := types.NamespacedName{
+			// 	Name:      kmakename,
+			// 	Namespace: namespace,
+			// }
+			// f2 := &bythepowerofv1.Kmake{}
+			// Expect(k8sClient.Get(context.Background(), key2, f2)).Should(Succeed())
+			// Expect(k8sClient.Delete(context.Background(), f2)).Should(Succeed())
 
-			By("delete kmsr")
-			key3 := types.NamespacedName{
-				Name:      kmsrName,
-				Namespace: namespace,
-			}
-			f3 := &bythepowerofv1.KmakeScheduleRun{}
+			// By("delete kmsr")
+			// key3 := types.NamespacedName{
+			// 	Name:      kmsrName,
+			// 	Namespace: namespace,
+			// }
+			// f3 := &bythepowerofv1.KmakeScheduleRun{}
 			// deleting the sheduler should delete this
-			Expect(k8sClient.Get(context.Background(), key3, f3)).ShouldNot(Succeed())
+			// Expect(k8sClient.Get(context.Background(), key3, f3)).ShouldNot(Succeed())
 			// Expect(k8sClient.Delete(context.Background(), f3)).Should(Succeed())
 		})
 	})
