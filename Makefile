@@ -45,7 +45,7 @@ fmt:
 # Run go vet against code
 vet:
 	@# because the logrus stuff throws vet errors
-	go vet ./controllers/... ./api/...
+	go vet ./controllers/... ./api/... ./gql/...
 
 # Generate code
 generate: controller-gen
