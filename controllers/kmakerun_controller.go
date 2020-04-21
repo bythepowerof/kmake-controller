@@ -91,6 +91,30 @@ func (r *KmakeRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		return reconcile.Result{}, err
 	}
+	if instance.IsBeingDeleted() {
+		err = r.handleFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "finalizer")
+			return reconcile.Result{}, fmt.Errorf("error when handling finalizer: %v", err)
+		}
+		err = r.Event(instance, bythepowerofv1.Delete, bythepowerofv1.Main, "")
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if !instance.HasFinalizer(bythepowerofv1.KmakeRunFinalizerName) {
+		err = r.addFinalizer(instance)
+		if err != nil {
+			r.Event(instance, bythepowerofv1.Error, bythepowerofv1.Main, "finalizer")
+
+			return reconcile.Result{}, fmt.Errorf("error when handling kmakerun finalizer: %v", err)
+		}
+		r.Event(instance, bythepowerofv1.Provision, bythepowerofv1.Main, "finalizer")
+
+		return ctrl.Result{}, nil
+	}
 
 	kmakename := instance.GetKmakeName()
 	kmake := &bythepowerofv1.Kmake{}
