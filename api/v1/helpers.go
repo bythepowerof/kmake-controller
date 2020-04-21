@@ -83,7 +83,7 @@ const (
 )
 
 func (d Label) String() string {
-	return [...]string{"kmake", "status", "run", "schedule", "schedule-instance", "schedule-env", "workload", "schedulerun"}[d]
+	return [...]string{"kmake", "status", "run", "scheduler", "schedule-instance", "schedule-env", "workload", "schedulerun"}[d]
 }
 
 func containsString(slice []string, s string) bool {

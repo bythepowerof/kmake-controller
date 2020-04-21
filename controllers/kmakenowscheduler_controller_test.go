@@ -143,8 +143,8 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 					Name:      kmakerunname,
 					Namespace: namespace,
 					Labels: map[string]string{
-						"bythepowerof.github.io/kmake":    kmakename,
-						"bythepowerof.github.io/schedule": "test2",
+						"bythepowerof.github.io/kmake":     kmakename,
+						"bythepowerof.github.io/scheduler": "test2",
 					},
 				},
 				Spec: bythepowerofv1.KmakeRunSpec{},
