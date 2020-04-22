@@ -5,6 +5,8 @@ import (
 	context "context"
 	"fmt"
 	"github.com/bythepowerof/kmake-controller/api/v1"
+	"os"
+	"strings"
 	"sync"
 
 	// 	// "github.com/bythepowerof/kmake-controller/api/v1"
@@ -12,6 +14,10 @@ import (
 	// 	// v11 "k8s.io/api/core/v1"
 	// 	// "k8s.io/apimachinery/pkg/api/errors"
 	// 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -30,11 +36,24 @@ type KmakeListener struct {
 	namespace string
 }
 
-func NewKmakeListener(client client.Client, manager manager.Manager, namespace string) *KmakeListener {
+func NewKmakeListener(namespace string) *KmakeListener {
 
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = bythepowerofv1.AddToScheme(scheme)
+
+	mo := manager.Options{Scheme: scheme, MetricsBindAddress: "0"}
+	if strings.ToLower(namespace) != "all" {
+		mo.Namespace = namespace
+	}
+	mgr, err := manager.New(ctrl.GetConfigOrDie(), mo)
+	if err != nil {
+		fmt.Println("failed to create manager")
+		os.Exit(1)
+	}
 	return &KmakeListener{
-		client:    client,
-		manager:   manager,
+		client:    mgr.GetClient(),
+		manager:   mgr,
 		mutex:     sync.Mutex{},
 		changes:   map[string]map[int]chan KmakeObject{},
 		namespace: namespace,
