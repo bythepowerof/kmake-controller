@@ -36,21 +36,28 @@ type KmakeListener struct {
 	namespace string
 }
 
-func NewKmakeListener(namespace string) *KmakeListener {
+func NewKmakeListener(namespace string, mgr manager.Manager) *KmakeListener {
 
-	scheme := runtime.NewScheme()
-	_ = clientgoscheme.AddToScheme(scheme)
-	_ = bythepowerofv1.AddToScheme(scheme)
+	if mgr == nil {
+		scheme := runtime.NewScheme()
+		_ = clientgoscheme.AddToScheme(scheme)
+		_ = bythepowerofv1.AddToScheme(scheme)
 
-	mo := manager.Options{Scheme: scheme, MetricsBindAddress: "0"}
-	if strings.ToLower(namespace) != "all" {
-		mo.Namespace = namespace
+		var err error
+
+		// facilitate testing by passing manager in
+		mo := manager.Options{Scheme: scheme, MetricsBindAddress: "0"}
+		if strings.ToLower(namespace) != "all" {
+			mo.Namespace = namespace
+		}
+		mgr, err = manager.New(ctrl.GetConfigOrDie(), mo)
+
+		if err != nil {
+			fmt.Println("failed to create manager")
+			os.Exit(1)
+		}
 	}
-	mgr, err := manager.New(ctrl.GetConfigOrDie(), mo)
-	if err != nil {
-		fmt.Println("failed to create manager")
-		os.Exit(1)
-	}
+
 	return &KmakeListener{
 		client:    mgr.GetClient(),
 		manager:   mgr,
@@ -110,10 +117,10 @@ func (r *KmakeListener) KmakeChanges(namespace string) error {
 		panic(err)
 	}
 
-	// err := r.prepareKmakeNowSchedulerWatch()
-	// if err != nil {
-	// 	panic(err)
-	// }
+	err = r.prepareKmakeNowSchedulerWatch()
+	if err != nil {
+		panic(err)
+	}
 
 	// Start the Controllers through the manager.
 	go func() {
@@ -142,9 +149,6 @@ func (r *KmakeListener) watchKmake(o reconcile.Request) (reconcile.Result, error
 
 	err := r.client.Get(context.Background(), o.NamespacedName, ret)
 	if err != nil {
-		// if errors.IsNotFound(err) {
-		// 	return reconcile.Result{}, nil
-		// }
 		return reconcile.Result{}, err
 	}
 	if ret.IsBeingDeleted() {
@@ -177,9 +181,38 @@ func (r *KmakeListener) watchKmakeRun(o reconcile.Request) (reconcile.Result, er
 
 	err := r.client.Get(context.Background(), o.NamespacedName, ret)
 	if err != nil {
-		// if errors.IsNotFound(err) {
-		// 	return reconcile.Result{}, nil
-		// }
+		return reconcile.Result{}, err
+	}
+	if ret.IsBeingDeleted() {
+		ret.Status.Status = "Deleting"
+	}
+
+	// Notify new message
+	r.mutex.Lock()
+	for _, ch := range r.changes[o.Namespace] {
+		ch <- ret
+	}
+	r.mutex.Unlock()
+	return reconcile.Result{}, nil
+}
+
+func (r *KmakeListener) prepareKmakeNowSchedulerWatch() error {
+	c, err := controller.New("kmakenowscheduler-watch", r.manager, controller.Options{
+		Reconciler: reconcile.Func(r.watchKmakeNowScheduler),
+	})
+	if err != nil {
+		return err
+	}
+	// Watch for kmake objects create / update / delete events and call Reconcile
+	return c.Watch(&source.Kind{Type: &v1.KmakeNowScheduler{}}, &handler.EnqueueRequestForObject{})
+}
+
+func (r *KmakeListener) watchKmakeNowScheduler(o reconcile.Request) (reconcile.Result, error) {
+	// Your business logic to implement the API by creating, updating, deleting objects goes here.
+	ret := &v1.KmakeNowScheduler{}
+
+	err := r.client.Get(context.Background(), o.NamespacedName, ret)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if ret.IsBeingDeleted() {
