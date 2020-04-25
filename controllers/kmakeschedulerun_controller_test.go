@@ -214,7 +214,7 @@ var _ = Describe("Controllers/KmakeRunController", func() {
 
 			Expect(k8sClient.Create(context.Background(), schenv)).Should(Succeed())
 
-			By("Create kmake chedule run - start")
+			By("Create kmake schedule run - start")
 
 			kmsr := &bythepowerofv1.KmakeScheduleRun{
 				ObjectMeta: kmsrMeta,

@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package gql
 
 import (
 	"os"
@@ -87,38 +87,6 @@ var _ = BeforeSuite(func(done Done) {
 		Namespace:          namespace,
 		MetricsBindAddress: "0",
 	})
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&KmakeReconciler{
-		Client:   k8sManager.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("kmake").WithName(namespace),
-		Recorder: k8sManager.GetEventRecorderFor("kmake-controller"),
-		Scheme:   scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&KmakeNowSchedulerReconciler{
-		Client:   k8sManager.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("KmakeNowScheduler").WithName(namespace),
-		Recorder: k8sManager.GetEventRecorderFor("kmake-now-scheduler-controller"),
-		Scheme:   scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&KmakeScheduleRunReconciler{
-		Client:   k8sManager.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("KmakeScheduleRun").WithName(namespace),
-		Recorder: k8sManager.GetEventRecorderFor("kmake-schedule-run-controller"),
-		Scheme:   scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&KmakeRunReconciler{
-		Client:   k8sManager.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("KmakeRun").WithName(namespace),
-		Recorder: k8sManager.GetEventRecorderFor("kmake-run-controller"),
-		Scheme:   scheme,
-	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
