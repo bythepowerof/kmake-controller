@@ -14,7 +14,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeScheduler)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeScheduler)
 			Expect(ok).To(Equal(true))
@@ -27,7 +27,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeObject)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeObject)
 			Expect(ok).To(Equal(true))
@@ -39,7 +39,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeObject)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeObject)
 			Expect(ok).To(Equal(true))
@@ -51,7 +51,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeObject)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeObject)
 			Expect(ok).To(Equal(true))
@@ -63,7 +63,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeObject)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeObject)
 			Expect(ok).To(Equal(true))
@@ -75,7 +75,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -87,7 +87,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -99,7 +99,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -111,7 +111,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -123,7 +123,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -135,7 +135,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -147,7 +147,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -159,7 +159,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))
@@ -171,7 +171,7 @@ var _ = Describe("Interfaces", func() {
 			var i interface{} = v
 			_, ok := i.(KmakeRunOperation)
 			Expect(ok).To(Equal(false))
-		
+
 			var p interface{} = &v
 			_, ok = p.(KmakeRunOperation)
 			Expect(ok).To(Equal(true))

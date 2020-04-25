@@ -83,8 +83,9 @@ var _ = BeforeSuite(func(done Done) {
 
 	// +kubebuilder:scaffold:scheme
 	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:    scheme,
-		Namespace: namespace,
+		Scheme:             scheme,
+		Namespace:          namespace,
+		MetricsBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
 

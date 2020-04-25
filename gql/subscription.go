@@ -9,11 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	// 	// "github.com/bythepowerof/kmake-controller/api/v1"
-	// 	"github.com/bythepowerof/kmake-controller/gql"
-	// 	// v11 "k8s.io/api/core/v1"
-	// 	// "k8s.io/apimachinery/pkg/api/errors"
-	// 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -28,16 +23,18 @@ import (
 )
 
 type KmakeListener struct {
-	client    client.Client
-	manager   manager.Manager
-	mutex     sync.Mutex
-	changes   map[string]map[int]chan KmakeObject
-	index     int
-	namespace string
+	client     client.Client
+	manager    manager.Manager
+	mutex      sync.Mutex
+	changes    map[string]map[int]chan KmakeObject
+	index      int
+	namespace  string
+	ownManager bool
 }
 
 func NewKmakeListener(namespace string, mgr manager.Manager) *KmakeListener {
 
+	ownManager := false
 	if mgr == nil {
 		scheme := runtime.NewScheme()
 		_ = clientgoscheme.AddToScheme(scheme)
@@ -56,14 +53,16 @@ func NewKmakeListener(namespace string, mgr manager.Manager) *KmakeListener {
 			fmt.Println("failed to create manager")
 			os.Exit(1)
 		}
+		ownManager = true
 	}
 
 	return &KmakeListener{
-		client:    mgr.GetClient(),
-		manager:   mgr,
-		mutex:     sync.Mutex{},
-		changes:   map[string]map[int]chan KmakeObject{},
-		namespace: namespace,
+		client:     mgr.GetClient(),
+		manager:    mgr,
+		mutex:      sync.Mutex{},
+		changes:    map[string]map[int]chan KmakeObject{},
+		namespace:  namespace,
+		ownManager: ownManager,
 	}
 
 }
@@ -123,11 +122,13 @@ func (r *KmakeListener) KmakeChanges(namespace string) error {
 	}
 
 	// Start the Controllers through the manager.
-	go func() {
-		if err := r.manager.Start(signals.SetupSignalHandler()); err != nil {
-			panic(err)
-		}
-	}()
+	if r.ownManager {
+		go func() {
+			if err := r.manager.Start(signals.SetupSignalHandler()); err != nil {
+				panic(err)
+			}
+		}()
+	}
 
 	return nil
 }
