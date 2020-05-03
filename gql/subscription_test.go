@@ -276,16 +276,20 @@ var _ = Describe("Controllers/KmakeController", func() {
 			Expect(k8sClient.Get(context.Background(), keyk, f)).Should(Succeed())
 			Expect(k8sClient.Delete(context.Background(), f)).Should(Succeed())
 
-			// doesn't seem to work
+			// these don't come in the deleted order...
+			// var kmakeStatus string
+
 			// Eventually(func() string {
 			// 	select {
 			// 	case result := <-ch:
-			// 		return result.GetStatus()
+			// 		kmakeStatus = result.GetStatus()
+			// 		return result.GetName()
 			// 	default:
+			// 		kmakeStatus = ""
 			// 		return ""
 			// 	}
-			// }, timeout, interval).Should(Equal("Deleting"))
+			// }, timeout, interval).Should(Equal(kmakename))
+			// Expect(kmakeStatus).Should(Equal("Deleting"))
 		})
-
 	})
 })
