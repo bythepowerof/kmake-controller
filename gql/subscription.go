@@ -74,6 +74,7 @@ func (r *KmakeListener) AddChangeClient(ctx context.Context, namespace string) (
 
 	kmo := make(chan KmakeObject, 1)
 	r.mutex.Lock()
+	idx := r.index
 	r.index++
 
 	if _, ok := r.changes[namespace]; !ok {
@@ -84,12 +85,13 @@ func (r *KmakeListener) AddChangeClient(ctx context.Context, namespace string) (
 	r.mutex.Unlock()
 
 	// Delete channel when done
-	go func() {
+	go func(index int) {
 		<-ctx.Done()
 		r.mutex.Lock()
-		delete(r.changes[r.namespace], r.index)
+		delete(r.changes[r.namespace], index)
 		r.mutex.Unlock()
-	}()
+	}(idx)
+
 	return kmo, nil
 }
 
@@ -158,10 +160,16 @@ func (r *KmakeListener) watchKmake(o reconcile.Request) (reconcile.Result, error
 
 	// Notify new message
 	r.mutex.Lock()
-	for _, ch := range r.changes[o.Namespace] {
-		ch <- ret
+	for id, ch := range r.changes[o.Namespace] {
+		select {
+		case ch <- ret:
+			break
+		default:
+			delete(r.changes[o.Namespace], id)
+		}
 	}
 	r.mutex.Unlock()
+
 	return reconcile.Result{}, nil
 }
 
@@ -190,8 +198,13 @@ func (r *KmakeListener) watchKmakeRun(o reconcile.Request) (reconcile.Result, er
 
 	// Notify new message
 	r.mutex.Lock()
-	for _, ch := range r.changes[o.Namespace] {
-		ch <- ret
+	for id, ch := range r.changes[o.Namespace] {
+		select {
+		case ch <- ret:
+			break
+		default:
+			delete(r.changes[o.Namespace], id)
+		}
 	}
 	r.mutex.Unlock()
 	return reconcile.Result{}, nil
@@ -222,8 +235,13 @@ func (r *KmakeListener) watchKmakeNowScheduler(o reconcile.Request) (reconcile.R
 
 	// Notify new message
 	r.mutex.Lock()
-	for _, ch := range r.changes[o.Namespace] {
-		ch <- ret
+	for id, ch := range r.changes[o.Namespace] {
+		select {
+		case ch <- ret:
+			break
+		default:
+			delete(r.changes[o.Namespace], id)
+		}
 	}
 	r.mutex.Unlock()
 	return reconcile.Result{}, nil
@@ -257,8 +275,13 @@ func (r *KmakeListener) watchKmakeScheduleRun(o reconcile.Request) (reconcile.Re
 
 	// Notify new message
 	r.mutex.Lock()
-	for _, ch := range r.changes[o.Namespace] {
-		ch <- ret
+	for id, ch := range r.changes[o.Namespace] {
+		select {
+		case ch <- ret:
+			break
+		default:
+			delete(r.changes[o.Namespace], id)
+		}
 	}
 	r.mutex.Unlock()
 	return reconcile.Result{}, nil
