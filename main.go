@@ -20,9 +20,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/activeshadow/logr/logrusr"
 	bythepowerofv1 "github.com/bythepowerof/kmake-controller/api/v1"
 	"github.com/bythepowerof/kmake-controller/controllers"
-	"github.com/bythepowerof/kmake-controller/logrusr"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
